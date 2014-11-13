@@ -1,4 +1,4 @@
-﻿namespace Common.Mappers
+﻿namespace Enmap
 {
     public class MappingContext
     {

@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
-using Common.Mappers.Utils;
+using Enmap.Utils;
 
-namespace Common.Mappers.Applicators
+namespace Enmap.Applicators
 {
     public class EntityItemApplicator : MapperItemApplicator
     {

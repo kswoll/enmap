@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -8,10 +7,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
-using Common.Mappers.Applicators;
-using Common.Mappers.Utils;
+using Enmap.Applicators;
+using Enmap.Utils;
 
-namespace Common.Mappers
+namespace Enmap
 {
     public abstract class Mapper
     {

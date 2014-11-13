@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 
-namespace Common.Mappers.Utils
+namespace Enmap.Utils
 {
     public static class TypeBuilderUtils
     {

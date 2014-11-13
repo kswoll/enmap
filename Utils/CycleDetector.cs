@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Common.Mappers.Utils
+namespace Enmap.Utils
 {
     public static class CycleDetector
     {

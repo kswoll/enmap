@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reflection;
 
-namespace Common.Mappers.Utils
+namespace Enmap.Utils
 {
     public static class GenericExtensions
     {

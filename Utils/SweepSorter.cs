@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Common.Mappers.Utils
+namespace Enmap.Utils
 {
     public static class SweepSorter
     {

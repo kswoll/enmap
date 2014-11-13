@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Common.Mappers
+namespace Enmap
 {
     public abstract class MapperRegistry<TContext>
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Common.Mappers.Utils
+namespace Enmap.Utils
 {
     public static class Class<T>
     {

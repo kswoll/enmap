@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 
-namespace Common.Mappers.Applicators
+namespace Enmap.Applicators
 {
     public interface IMapperItemApplicator
     {

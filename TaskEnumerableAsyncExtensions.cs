@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Common.Mappers
+namespace Enmap
 {
     public static class TaskEnumerableAsyncExtensions 
     {
