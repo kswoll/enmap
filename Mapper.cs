@@ -251,6 +251,12 @@ namespace Enmap
             return destinationResult;
         }
 
+        public async Task<TDestination> MapTo(TSource source, TContext context = default(TContext))
+        {
+            var result = await MapTo(new[] { source }.AsQueryable(), context);
+            return result.Single();
+        }
+
         /// <summary>
         /// This should generally only be called internally (or by extensions) to map a transient type to the 
         /// destination type.
