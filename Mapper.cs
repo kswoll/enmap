@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Enmap.Applicators;
+using Enmap.Projections;
 using Enmap.Utils;
 
 namespace Enmap
@@ -27,7 +28,7 @@ namespace Enmap
         public abstract Type SourceType { get; }
         public abstract Type TransientType { get; }
         public abstract Type DestinationType { get; }
-        public abstract LambdaExpression Projection { get; }
+        public abstract ProjectionBuilder Projection { get; }
         public abstract Task<object> ObjectMapTransientTo(object transient, object context);
 
         public static void Initialize<TContext>(MapperRegistry<TContext> registry)
@@ -80,7 +81,7 @@ namespace Enmap
         private MethodInfo queryableSelectMethod;
         private MethodInfo toArrayAsyncMethod;
         private PropertyInfo taskResult;
-        private LambdaExpression projection;
+        private ProjectionBuilder projection;
         private List<IMapperItemApplicator> applicators = new List<IMapperItemApplicator>();
 
         public Mapper(IMapperBuilder<TSource, TDestination, TContext> builder) : base(typeof(TSource), typeof(TDestination))
@@ -124,7 +125,7 @@ namespace Enmap
         /// <summary>
         /// The expression tree that translates TSource into the transient type.
         /// </summary>
-        public override LambdaExpression Projection
+        public override ProjectionBuilder Projection
         {
             get { return projection; }
         }
@@ -161,15 +162,13 @@ namespace Enmap
             toArrayAsyncMethod = typeof(QueryableExtensions).GetMethods().Single(x => x.Name == "ToArrayAsync" && x.GetParameters().Length == 1).MakeGenericMethod(transientType);
             taskResult = typeof(Task<>).MakeGenericType(transientType.MakeArrayType()).GetProperty("Result");
 
-            var obj = Expression.Parameter(typeof(TSource));
-            var memberBindings = new List<MemberBinding>();
+            var items = new List<ProjectionBuilderItem>();
             foreach (var applicator in applicators)
             {
-                memberBindings.AddRange(applicator.BuildMemberBindings(obj, transientType));
+                items.AddRange(applicator.BuildProjection(transientType));
             }
-            var body = Expression.MemberInit(Expression.New(transientType), memberBindings);
 
-            projection = Expression.Lambda(sourceToTransientDelegateType, body, obj);
+            projection = new ProjectionBuilder(transientType, sourceToTransientDelegateType, typeof(TSource), items.ToArray());
         }
 
         /// <summary>
@@ -184,6 +183,23 @@ namespace Enmap
         {
             foreach (var item in builder.Items)
             {
+/*
+                if (item.SourceType.IsGenericEnumerable() && !item.DestinationType.IsGenericList())
+                {
+                    var sourceType = item.SourceType.GetGenericArgument(typeof(IEnumerable<>), 0);
+                    var destinationType = item.DestinationType;
+                    var itemMapper = Get(sourceType, destinationType);
+
+                    if (itemMapper != null)
+                    {
+                        applicators.Add(new SequenceToScalarItemApplicator(item, typeof(TContext), itemMapper));
+                    }
+                    else
+                    {
+                        applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
+                    }                    
+                }
+*/
                 if (item.SourceType.IsGenericEnumerable() && item.DestinationType.IsGenericList())
                 {
                     var sourceType = item.SourceType.GetGenericArgument(typeof(IEnumerable<>), 0);
@@ -192,11 +208,11 @@ namespace Enmap
 
                     if (itemMapper != null)
                     {
-                        applicators.Add(new SequenceItemApplicator(item, itemMapper));
+                        applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
                     }
                     else
                     {
-                        applicators.Add(new DefaultItemApplicator(item));
+                        applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
                     }
                 }
                 else
@@ -204,11 +220,11 @@ namespace Enmap
                     var itemMapper = Get(item.SourceType, item.DestinationType);
                     if (itemMapper != null)
                     {
-                        applicators.Add(new EntityItemApplicator(item, itemMapper));
+                        applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));
                     }
                     else
                     {
-                        applicators.Add(new DefaultItemApplicator(item));
+                        applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
                     }
                 }
             }
@@ -222,7 +238,7 @@ namespace Enmap
         /// <returns>A sequence of TDestination mapped from the query.</returns>
         public async Task<IEnumerable<TDestination>> MapTo(IQueryable<TSource> query, TContext context = default(TContext))
         {
-            var queryableResult = queryableSelectMethod.Invoke(null, new object[] { query, projection });
+            var queryableResult = queryableSelectMethod.Invoke(null, new object[] { query, projection.BuildProjection(context) });
             var task = (Task)toArrayAsyncMethod.Invoke(null, new[] { queryableResult });
             await task;
             var arrayResult = (Array)taskResult.GetValue(task, null);

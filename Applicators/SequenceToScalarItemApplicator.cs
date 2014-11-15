@@ -11,12 +11,12 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class SequenceItemApplicator : MapperItemApplicator
+    public class SequenceToScalarItemApplicator : MapperItemApplicator
     {
         private Mapper mapper;
         private PropertyInfo transientProperty;
-
-        public SequenceItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        
+        public SequenceToScalarItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
             this.mapper = mapper;
         }
@@ -53,12 +53,7 @@ namespace Enmap.Applicators
         public override async Task CopyToDestination(object source, object destination, object context)
         {
             var transientValue = (IEnumerable)transientProperty.GetValue(source, null);
-            var destinationValue = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(mapper.DestinationType));
-            foreach (var item in transientValue)
-            {
-                var destinationItem = await mapper.ObjectMapTransientTo(item, context);
-                destinationValue.Add(destinationItem);
-            }
+            var destinationValue = await mapper.ObjectMapTransientTo(transientValue, context);
             await Item.CopyValueToDestination(destinationValue, destination, context);
         }
     }

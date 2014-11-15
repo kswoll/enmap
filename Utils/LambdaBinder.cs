@@ -72,6 +72,11 @@ namespace Enmap.Utils
             }
         }
 
+        public override Expression Visit(Expression node)
+        {
+            return Substitute(node) ?? base.Visit(node);
+        }
+
         private Expression Substitute(Expression node)
         {
             if (targetParametersSet.Contains(node))
@@ -85,9 +90,11 @@ namespace Enmap.Utils
 //            return Expression.Lambda<T>(Visit(node.Body), node.Name, node.TailCall, node.Parameters.Select(x => (ParameterExpression)Visit(x)));
 //        }
 
+/*
         protected override Expression VisitParameter(ParameterExpression node)
         {
             return Substitute(node) ?? base.VisitParameter(node);
         }
+*/
     }
 }

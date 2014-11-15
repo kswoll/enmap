@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using Enmap.Projections;
 using Enmap.Utils;
 
 namespace Enmap.Applicators
@@ -12,7 +13,7 @@ namespace Enmap.Applicators
     {
         private PropertyInfo transientProperty;
 
-        public DefaultItemApplicator(IMapperItem item) : base(item)
+        public DefaultItemApplicator(IMapperItem item, Type contextType) : base(item, contextType)
         {
         }
 
@@ -21,18 +22,30 @@ namespace Enmap.Applicators
             type.DefineProperty(Item.Name, Item.SourceType);
         }
 
-        public override IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, Type transientType)
+        public override IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType)
         {
-            transientProperty = transientType.GetProperty(Item.Name);
+            try
+            {
+                transientProperty = transientType.GetProperty(Item.Name);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Failed to find property: " + transientType.FullName + "." + Item.Name, e);
+            }
+            yield return BuildMemberBindings;
+        }
+
+        public IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, object context)
+        {
             var binder = new LambdaBinder();
-            var result = binder.BindBody(Item.From, obj);
+            var result = binder.BindBody(Item.From, obj, Expression.Constant(context, ContextType));
             yield return Expression.Bind(transientProperty, result);
         }
 
         public override async Task CopyToDestination(object source, object destination, object context)
         {
             var transientValue = transientProperty.GetValue(source, null);
-            await Item.CopyValueToDestination(transientValue, destination);
+            await Item.CopyValueToDestination(transientValue, destination, context);
         }
     }
 }

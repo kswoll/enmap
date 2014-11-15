@@ -3,16 +3,24 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using Enmap.Projections;
 
 namespace Enmap.Applicators
 {
     public abstract class MapperItemApplicator : IMapperItemApplicator
     {
         private IMapperItem item;
+        private Type contextType;
 
-        public MapperItemApplicator(IMapperItem item)
+        public MapperItemApplicator(IMapperItem item, Type contextType)
         {
             this.item = item;
+            this.contextType = contextType;
+        }
+
+        public Type ContextType
+        {
+            get { return contextType; }
         }
 
         public IMapperItem Item
@@ -21,7 +29,7 @@ namespace Enmap.Applicators
         }
 
         public abstract void BuildTransientType(TypeBuilder type);
-        public abstract IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, Type transientType);
+        public abstract IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType);
         public abstract Task CopyToDestination(object source, object destination, object context);
     }
 }

@@ -13,7 +13,7 @@ namespace Enmap.Applicators
         private Mapper mapper;
         private PropertyInfo transientProperty;
 
-        public EntityItemApplicator(IMapperItem item, Mapper mapper) : base(item)
+        public EntityItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
             this.mapper = mapper;
         }
@@ -23,26 +23,33 @@ namespace Enmap.Applicators
             type.DefineProperty(Item.Name, mapper.TransientType);
         }
 
-        public override IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, Type transientType)
+        public override IEnumerable<Projections.ProjectionBuilderItem> BuildProjection(Type transientType)
         {
             transientProperty = transientType.GetProperty(Item.Name);
+            yield return BuildMemberBindings;
+        }
 
-            // This is something like x => x.SubEntities
+        private IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, object context)
+        {
+            // This is something like x => x.SubEntity
             var mainBinder = new LambdaBinder();
-            var result = mainBinder.BindBody(Item.From, obj);
+            var originalProjection = mainBinder.BindBody(Item.From, obj, Expression.Constant(context, ContextType));
 
-            // This converts that to: x => x.SubEntities.Select(y => <item.Projection>)
+            // This converts that to: x => new { x.SubEntity.Foo1 }
             var subBinder = new LambdaBinder();
-            result = subBinder.BindBody(mapper.Projection, result);
+            var lambda = mapper.Projection.BuildProjection(context);
+            var result = subBinder.BindBody(lambda, originalProjection);
+
+            var conditional = Expression.Condition(Expression.NotEqual(originalProjection, Expression.Constant(null)), result, Expression.Constant(null, result.Type), result.Type);
                         
-            yield return Expression.Bind(transientProperty, result);
+            yield return Expression.Bind(transientProperty, conditional);
         }
 
         public override async Task CopyToDestination(object source, object destination, object context)
         {
             var transientValue = transientProperty.GetValue(source, null);
-            var destinationValue = await mapper.ObjectMapTransientTo(transientValue, context);
-            await Item.CopyValueToDestination(destinationValue, destination);
+            var destinationValue = transientValue == null ? null : await mapper.ObjectMapTransientTo(transientValue, context);
+            await Item.CopyValueToDestination(destinationValue, destination, context);
         }
     }
 }

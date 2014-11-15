@@ -34,11 +34,12 @@ namespace Enmap
     {
         Expression<Func<TDestination, TValue>> Property { get; }
         IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TSourceValue>> property);
+        IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property);
     }
 
     public interface IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForExpression<TSource, TDestination, TContext, TDestinationValue>
     {
-        IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, Task<TDestinationValue>> transposer);
+        IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After(Func<TDestination, TContext, Task> action);
     }
 
@@ -49,9 +50,19 @@ namespace Enmap
 
     public static class MapperExtensions
     {
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, Task<TDestinationValue>> transposer)
+        {
+            return expression.To((x, context) => transposer(x));
+        }
+
         public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, TDestinationValue> transposer)
         {
             return expression.To(x => Task.FromResult(transposer(x)));
+        }
+
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, TContext, TDestinationValue> transposer)
+        {
+            return expression.To((x, context) => Task.FromResult(transposer(x, context)));
         }
 
         public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TDestination, Task> action)
@@ -110,6 +121,11 @@ namespace Enmap
 
             public IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TSourceValue>> property)
             {
+                return From((Expression<Func<TSource, TContext, TSourceValue>>)property.AppendParameters(typeof(TContext)));
+            }
+
+            public IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property)
+            {
                 return new ForFromExpression<TValue, TSourceValue>(this, property);
             }
         }
@@ -132,16 +148,21 @@ namespace Enmap
             {
                 return forExpression.From(property);
             }
+
+            public IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property)
+            {
+                return forExpression.From(property);
+            }
         }
 
         public class ForFromExpression<TDestinationValue, TSourceValue> : ForExpressionAdapter<TDestinationValue>, IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>, IMapperItem
         {
             private ForExpression<TDestinationValue> forExpression;
-            private Func<TSourceValue, Task<TDestinationValue>> transposer;
-            private Expression<Func<TSource, TSourceValue>> fromProperty;
+            private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;
+            private Expression<Func<TSource, TContext, TSourceValue>> fromProperty;
             private List<Func<object, object, Task>> afterActions = new List<Func<object, object, Task>>();
 
-            public ForFromExpression(ForExpression<TDestinationValue> forExpression, Expression<Func<TSource, TSourceValue>> fromProperty) : base(forExpression)
+            public ForFromExpression(ForExpression<TDestinationValue> forExpression, Expression<Func<TSource, TContext, TSourceValue>> fromProperty) : base(forExpression)
             {
                 this.forExpression = forExpression;
                 this.fromProperty = fromProperty;
@@ -168,13 +189,13 @@ namespace Enmap
                 get { return fromProperty; }
             }
 
-            public async Task CopyValueToDestination(object transientValue, object destination)
+            public async Task CopyValueToDestination(object transientValue, object destination, object context)
             {
                 if (transposer != null)
                 {
                     try
                     {
-                        transientValue = await transposer((TSourceValue)transientValue);
+                        transientValue = await transposer((TSourceValue)transientValue, (TContext)context);
                     }
                     catch (Exception e)
                     {
@@ -193,7 +214,7 @@ namespace Enmap
                 }
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, Task<TDestinationValue>> transposer)
+            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
             {
                 if (this.transposer != null)
                     throw new Exception("To has already been called for this From expression.");
@@ -222,7 +243,7 @@ namespace Enmap
                 this.forFromExpression = forExpression;
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, Task<TDestinationValue>> transposer)
+            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
             {
                 return forFromExpression.To(transposer);
             }

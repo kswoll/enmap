@@ -11,7 +11,7 @@ namespace Enmap
         Type SourceType { get; }
         Type DestinationType { get; }
         LambdaExpression From { get; }
-        Task CopyValueToDestination(object transientValue, object destination);
+        Task CopyValueToDestination(object transientValue, object destination, object context);
         IEnumerable<Func<object, object, Task>> AfterTasks { get; }
     }
 }
