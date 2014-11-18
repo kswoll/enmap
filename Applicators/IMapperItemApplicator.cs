@@ -11,6 +11,6 @@ namespace Enmap.Applicators
     {
         void BuildTransientType(TypeBuilder type);
         IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType);
-        Task CopyToDestination(object source, object destination, object context);
+        Task CopyToDestination(object source, object destination, MapperContext context);
     }
 }

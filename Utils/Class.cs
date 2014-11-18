@@ -76,11 +76,16 @@ namespace Enmap.Utils
             var unary = current as UnaryExpression;
             if (unary != null)
                 current = unary.Operand;
-            MemberExpression member = (MemberExpression)current;
+            var member = (MemberExpression)current;
             return string.Join(".", member
                 .SelectRecursive(o => o.Expression is MemberExpression ? (MemberExpression)o.Expression : null)
                 .Select(o => o.Member.Name)
                 .Reverse());
+        }
+
+        public static bool IsProperty(this LambdaExpression expression)
+        {
+            return expression.GetPropertyInfo() != null;
         }
 
         public static PropertyInfo GetPropertyInfo(this LambdaExpression expression)
@@ -89,7 +94,9 @@ namespace Enmap.Utils
             var unary = current as UnaryExpression;
             if (unary != null)
                 current = unary.Operand;
-            var call = (MemberExpression)current;
+            var call = current as MemberExpression;
+            if (call == null)
+                return null;
             return (PropertyInfo)call.Member;
         }
 

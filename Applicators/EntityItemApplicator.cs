@@ -29,7 +29,7 @@ namespace Enmap.Applicators
             yield return BuildMemberBindings;
         }
 
-        private IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, object context)
+        private IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, MapperContext context)
         {
             // This is something like x => x.SubEntity
             var mainBinder = new LambdaBinder();
@@ -45,7 +45,7 @@ namespace Enmap.Applicators
             yield return Expression.Bind(transientProperty, conditional);
         }
 
-        public override async Task CopyToDestination(object source, object destination, object context)
+        public override async Task CopyToDestination(object source, object destination, MapperContext context)
         {
             var transientValue = transientProperty.GetValue(source, null);
             var destinationValue = transientValue == null ? null : await mapper.ObjectMapTransientTo(transientValue, context);

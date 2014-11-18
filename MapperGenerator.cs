@@ -6,15 +6,15 @@ using Enmap.Utils;
 
 namespace Enmap
 {
-    public class MapperGenerator<TContext>
+    public class MapperGenerator<TContext> where TContext : MapperContext
     {
         internal MapperGenerator()
         {
         }
 
-        public IMapperBuilder<TSource, TDestination, TContext> Map<TSource, TDestination>()
+        public IMapperBuilder<TSource, TDestination, TContext> Map<TSource, TDestination>(MapperRegistry<TContext> registry)
         {
-            return new MapperBuilder<TSource, TDestination, TContext>();            
+            return new MapperBuilder<TSource, TDestination, TContext>(registry);            
         }
     }
 
@@ -23,67 +23,74 @@ namespace Enmap
         Mapper Finish();        
     }
 
-    public interface IMapperBuilder<TSource, TDestination, TContext> : IMapperBuilder
+    public interface IMapperBuilder<TSource, TDestination, TContext> : IMapperBuilder where TContext : MapperContext
     {
+        MapperRegistry<TContext> Registry { get; }
         Mapper<TSource, TDestination, TContext> Finish();
         IEnumerable<IMapperItem> Items { get; }
         IForExpression<TSource, TDestination, TContext, TValue> For<TValue>(Expression<Func<TDestination, TValue>> property);
     }
 
-    public interface IForExpression<TSource, TDestination, TContext, TValue> : IMapperBuilder<TSource, TDestination, TContext>
+    public interface IForExpression<TSource, TDestination, TContext, TValue> : IMapperBuilder<TSource, TDestination, TContext> where TContext : MapperContext
     {
         Expression<Func<TDestination, TValue>> Property { get; }
         IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TSourceValue>> property);
         IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property);
     }
 
-    public interface IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForExpression<TSource, TDestination, TContext, TDestinationValue>
+    public interface IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForExpression<TSource, TDestination, TContext, TDestinationValue> where TContext : MapperContext
     {
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After(Func<TDestination, TContext, Task> action);
     }
 
-    public interface IForWhenExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>
+    public interface IForWhenExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> where TContext : MapperContext
     {
         
     }
 
     public static class MapperExtensions
     {
-        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, Task<TDestinationValue>> transposer)
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, Task<TDestinationValue>> transposer) where TContext : MapperContext
         {
             return expression.To((x, context) => transposer(x));
         }
 
-        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, TDestinationValue> transposer)
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, TDestinationValue> transposer) where TContext : MapperContext
         {
             return expression.To(x => Task.FromResult(transposer(x)));
         }
 
-        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, TContext, TDestinationValue> transposer)
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, TContext, TDestinationValue> transposer) where TContext : MapperContext
         {
             return expression.To((x, context) => Task.FromResult(transposer(x, context)));
         }
 
-        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TDestination, Task> action)
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TDestination, Task> action) where TContext : MapperContext
         {
             return expression.After(async (x, context) => await action(x));
         }
 
-        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Action<TDestination, TContext> action)
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Action<TDestination, TContext> action) where TContext : MapperContext
         {
             return expression.After(async (x, context) => action(x, context));
         }
 
-        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Action<TDestination> action)
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Action<TDestination> action) where TContext : MapperContext
         {
             return expression.After(async x => action(x));
         }
     }
 
-    public class MapperBuilder<TSource, TDestination, TContext> : IMapperBuilder<TSource, TDestination, TContext>
+    public class MapperBuilder<TSource, TDestination, TContext> : IMapperBuilder<TSource, TDestination, TContext> where TContext : MapperContext
     {
+        internal MapperRegistry<TContext> registry;
         internal List<IMapperItem> items = new List<IMapperItem>();
+
+        public MapperBuilder(MapperRegistry<TContext> registry)
+        {
+            this.registry = registry;
+        }
 
         Mapper IMapperBuilder.Finish()
         {
@@ -93,6 +100,11 @@ namespace Enmap
         public Mapper<TSource, TDestination, TContext> Finish()
         {
             return new Mapper<TSource, TDestination, TContext>(this);
+        }
+
+        public MapperRegistry<TContext> Registry
+        {
+            get { return registry; }
         }
 
         public IForExpression<TSource, TDestination, TContext, TValue> For<TValue>(Expression<Func<TDestination, TValue>> property)
@@ -271,7 +283,7 @@ namespace Enmap
 */
     }
 
-    public class MapperBuilderAdapter<TSource, TDestination, TContext> : IMapperBuilder<TSource, TDestination, TContext>
+    public class MapperBuilderAdapter<TSource, TDestination, TContext> : IMapperBuilder<TSource, TDestination, TContext> where TContext : MapperContext
     {
         private IMapperBuilder<TSource, TDestination, TContext> source;
 
@@ -302,6 +314,11 @@ namespace Enmap
         public Mapper<TSource, TDestination, TContext> Finish()
         {
             return source.Finish();
+        }
+
+        public MapperRegistry<TContext> Registry
+        {
+            get { return source.Registry; }
         }
 
         Mapper IMapperBuilder.Finish()

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Core.Metadata.Edm;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -30,8 +33,13 @@ namespace Enmap
         public abstract Type DestinationType { get; }
         public abstract ProjectionBuilder Projection { get; }
         public abstract Task<object> ObjectMapTransientTo(object transient, object context);
+        public abstract void DemandFetcher(PropertyInfo entityRelationship);
+        public abstract IMapperRegistry Registry { get; }
+        public abstract IEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship);
+        public abstract Task<IEnumerable> ObjectMapTo(IQueryable query, MapperContext context);
+        public abstract Task ObjectMapTo(IQueryable query, Func<object, object, Task> transformer, MapperContext context);
 
-        public static void Initialize<TContext>(MapperRegistry<TContext> registry)
+        public static void Initialize<TContext>(MapperRegistry<TContext> registry) where TContext : MapperContext
         {
             var builder = new MapperGenerator<TContext>();
             registry.CallRegister(builder);
@@ -55,12 +63,12 @@ namespace Enmap
             }
         }
 
-        public static Mapper<TSource, TDestination, object> Get<TSource, TDestination>()
+        public static Mapper<TSource, TDestination, MapperContext> Get<TSource, TDestination>()
         {
-            return (Mapper<TSource, TDestination, object>)Get(typeof(TSource), typeof(TDestination));
+            return (Mapper<TSource, TDestination, MapperContext>)Get(typeof(TSource), typeof(TDestination));
         }
 
-        public static Mapper<TSource, TDestination, TContext> Get<TSource, TDestination, TContext>()
+        public static Mapper<TSource, TDestination, TContext> Get<TSource, TDestination, TContext>() where TContext : MapperContext
         {
             return (Mapper<TSource, TDestination, TContext>)Get(typeof(TSource), typeof(TDestination));
         }
@@ -73,7 +81,7 @@ namespace Enmap
         }
     }
 
-    public class Mapper<TSource, TDestination, TContext> : Mapper
+    public class Mapper<TSource, TDestination, TContext> : Mapper where TContext : MapperContext
     {
         private IMapperBuilder<TSource, TDestination, TContext> builder;
         private Type transientType;
@@ -83,6 +91,9 @@ namespace Enmap
         private PropertyInfo taskResult;
         private ProjectionBuilder projection;
         private List<IMapperItemApplicator> applicators = new List<IMapperItemApplicator>();
+        private List<Func<object, object, Task>> afterTasks = new List<Func<object, object, Task>>();
+        private Dictionary<PropertyInfo, IEntityFetcher> fetchers = new Dictionary<PropertyInfo, IEntityFetcher>();
+        private List<Tuple<PropertyInfo, PropertyInfo>> navigationProperties = new List<Tuple<PropertyInfo, PropertyInfo>>();
 
         public Mapper(IMapperBuilder<TSource, TDestination, TContext> builder) : base(typeof(TSource), typeof(TDestination))
         {
@@ -147,9 +158,35 @@ namespace Enmap
             var type = module.DefineType(assemblyName, TypeAttributes.Public);
             type.DefineDefaultConstructor(MethodAttributes.Public);
 
+            // Populate the after tasks
+            foreach (var item in builder.Items)
+            {
+                foreach (var task in item.AfterTasks)
+                {
+                    afterTasks.Add(task);
+                }
+            }
+
             // Populate the collection of applicators based on the type of relationships they are mapping.
             InitializeApplicators();
 
+            // Add foreign keys
+            var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == typeof(TSource).FullName);
+            foreach (var navigationProperty in entitySet.ElementType.NavigationProperties)
+            {
+                if (navigationProperty.RelationshipType is AssociationType)
+                {
+                    var association = (AssociationType)navigationProperty.RelationshipType;
+                    if (association.IsForeignKey && association.Constraint.ToProperties[0].DeclaringType == entitySet.ElementType)
+                    {
+                        var keyColumn = association.Constraint.ToProperties[0].Name;
+                        var efProperty = association.Constraint.ToProperties[0];
+                        var entityProperty = typeof(TSource).GetProperty(efProperty.Name);
+                        var property = type.DefineProperty("__" + keyColumn, entityProperty.PropertyType);
+                        navigationProperties.Add(new Tuple<PropertyInfo, PropertyInfo>(entityProperty, property));
+                    }
+                }
+            }
             // Flesh out the transient type by applying all the applicators
             foreach (var applicator in applicators)
             {
@@ -157,12 +194,29 @@ namespace Enmap
             }
 
             transientType = type.CreateType();
+
+            for (var i = 0; i < navigationProperties.Count; i++)
+            {
+                var property = navigationProperties[i];
+                navigationProperties[i] = Tuple.Create(property.Item1, transientType.GetProperty(property.Item2.Name));
+            }
+
             sourceToTransientDelegateType = typeof(Func<,>).MakeGenericType(typeof(TSource), transientType);
             queryableSelectMethod = typeof(Queryable).GetMethods().Single(x => x.Name == "Select" && x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType.ContainsGenericParameters && x.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Expression<>) && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericTypeDefinition() == typeof(Func<,>)).MakeGenericMethod(typeof(TSource), transientType);
             toArrayAsyncMethod = typeof(QueryableExtensions).GetMethods().Single(x => x.Name == "ToArrayAsync" && x.GetParameters().Length == 1).MakeGenericMethod(transientType);
             taskResult = typeof(Task<>).MakeGenericType(transientType.MakeArrayType()).GetProperty("Result");
 
             var items = new List<ProjectionBuilderItem>();
+
+            foreach (var item in navigationProperties)
+            {
+                items.Add((obj, context) =>
+                {
+//                    throw new Exception(obj + " " + item.Item1 + " " + item.Item2);
+                    return new[] { Expression.Bind(item.Item2, Expression.MakeMemberAccess(obj, item.Item1)) };
+                });
+            }
+
             foreach (var applicator in applicators)
             {
                 items.AddRange(applicator.BuildProjection(transientType));
@@ -208,7 +262,10 @@ namespace Enmap
 
                     if (itemMapper != null)
                     {
-                        applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
+                        if (item.From.IsProperty())
+                            applicators.Add(new FetchSequenceItemApplicator(item, typeof(TContext), itemMapper));
+                        else 
+                            applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
                     }
                     else
                     {
@@ -238,17 +295,35 @@ namespace Enmap
         /// <returns>A sequence of TDestination mapped from the query.</returns>
         public async Task<IEnumerable<TDestination>> MapTo(IQueryable<TSource> query, TContext context = default(TContext))
         {
+            var result = new List<TDestination>();
+            await MapTo(query, async (source, destination) => result.Add(destination), context);
+            return result;
+        }
+
+        public async Task MapTo(IQueryable<TSource> query, Func<object, TDestination, Task> translator, TContext context)
+        {
             var queryableResult = queryableSelectMethod.Invoke(null, new object[] { query, projection.BuildProjection(context) });
             var task = (Task)toArrayAsyncMethod.Invoke(null, new[] { queryableResult });
             await task;
             var arrayResult = (Array)taskResult.GetValue(task, null);
-            var destinationResult = new List<TDestination>();
             foreach (var element in arrayResult)
             {
                 var destination = await MapTransientTo(element, context);
-                destinationResult.Add(destination);
+                await translator(element, destination);
             }
-            return destinationResult;
+
+            // Mapping is complete, it's now time to apply post mapping behavior, such as making subsequent fetch queries.
+            await context.ApplyFetcher();
+        }
+
+        public override async Task<IEnumerable> ObjectMapTo(IQueryable query, MapperContext context)
+        {
+            return await MapTo((IQueryable<TSource>)query, (TContext)context);
+        }
+
+        public override Task ObjectMapTo(IQueryable query, Func<object, object, Task> transformer, MapperContext context)
+        {
+            return MapTo((IQueryable<TSource>)query, async (id, destination) => await transformer(id, destination), (TContext)context);
         }
 
         public async Task<TDestination> MapTo(TSource source, TContext context = default(TContext))
@@ -271,6 +346,10 @@ namespace Enmap
             {
                 await applicator.CopyToDestination(transient, destination, context);
             }            
+            foreach (var afterTask in afterTasks)
+            {
+                await afterTask(destination, context);
+            }
             return destination;
         }
 
@@ -284,6 +363,24 @@ namespace Enmap
         public override async Task<object> ObjectMapTransientTo(object transient, object context)
         {
             return await MapTransientTo(transient, (TContext)context);
+        }
+
+        public override void DemandFetcher(PropertyInfo entityRelationship)
+        {
+            if (!fetchers.ContainsKey(entityRelationship))
+            {
+                fetchers[entityRelationship] = FetcherFactory.CreateFetcher(this, entityRelationship);
+            }
+        }
+
+        public override IEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship)
+        {
+            return fetchers[primaryEntityRelationship];
+        }
+
+        public override IMapperRegistry Registry
+        {
+            get { return builder.Registry; }
         }
     }
 }

@@ -5,7 +5,7 @@ using Enmap.Utils;
 
 namespace Enmap.Projections
 {
-    public delegate IEnumerable<MemberBinding> ProjectionBuilderItem(ParameterExpression obj, object context);
+    public delegate IEnumerable<MemberBinding> ProjectionBuilderItem(ParameterExpression obj, MapperContext context);
 
     public class ProjectionBuilder
     {
@@ -28,7 +28,7 @@ namespace Enmap.Projections
             get { return delegateType; }
         }
 
-        public LambdaExpression BuildProjection(object context)
+        public LambdaExpression BuildProjection(MapperContext context)
         {
             var memberBindings = new List<MemberBinding>();
             foreach (var item in items)

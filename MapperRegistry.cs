@@ -1,15 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity.Core.Metadata.Edm;
 
 namespace Enmap
 {
-    public abstract class MapperRegistry<TContext>
+    public interface IMapperRegistry
+    {
+        EntityContainer Metadata { get; }
+        Type DbContextType { get; }
+    }
+
+    public abstract class MapperRegistry<TContext> : IMapperRegistry where TContext : MapperContext
     {
         private List<IMapperBuilder> mapperBuilders = new List<IMapperBuilder>();
         private List<Mapper> mappers = new List<Mapper>();
         private MapperGenerator<TContext> builder;
+        private Type dbContextType;
+        private EntityContainer metadata;
 
         protected abstract void Register();
+
+        protected MapperRegistry(Type dbContextType, EntityContainer metadata)
+        {
+            this.dbContextType = dbContextType;
+            this.metadata = metadata;
+        }
+
+        public EntityContainer Metadata
+        {
+            get { return metadata; }
+        }
+
+        public Type DbContextType
+        {
+            get { return dbContextType; }
+        }
 
         internal void CallRegister(MapperGenerator<TContext> builder)
         {
@@ -29,7 +54,7 @@ namespace Enmap
 
         public IMapperBuilder<TSource, TDestination, TContext> Map<TSource, TDestination>()
         {
-            var expression = new MapperGenerator<TContext>().Map<TSource, TDestination>();
+            var expression = new MapperGenerator<TContext>().Map<TSource, TDestination>(this);
             mapperBuilders.Add(expression);
             return expression;
         }

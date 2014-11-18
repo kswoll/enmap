@@ -35,14 +35,14 @@ namespace Enmap.Applicators
             yield return BuildMemberBindings;
         }
 
-        public IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, object context)
+        public IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, MapperContext context)
         {
             var binder = new LambdaBinder();
             var result = binder.BindBody(Item.From, obj, Expression.Constant(context, ContextType));
             yield return Expression.Bind(transientProperty, result);
         }
 
-        public override async Task CopyToDestination(object source, object destination, object context)
+        public override async Task CopyToDestination(object source, object destination, MapperContext context)
         {
             var transientValue = transientProperty.GetValue(source, null);
             await Item.CopyValueToDestination(transientValue, destination, context);
