@@ -414,7 +414,9 @@ namespace Enmap
 
         public override void DemandFetcher()
         {
-            if (primaryFetcher != null)
+            // Threadsafe because this method should not be invoked in a multithreaded context (happens during initialization,
+            // which must only happen once, and before any multithreaded activity begins)
+            if (primaryFetcher == null)
                 primaryFetcher = FetcherFactory.CreateFetcher(this);
         }
 
