@@ -58,6 +58,7 @@
     <Compile Include="Applicators\SequenceItemApplicator.cs" />
     <Compile Include="Applicators\SequenceToScalarItemApplicator.cs" />
     <Compile Include="EntityFetcherItem.cs" />
+    <Compile Include="RelationshipMappingStyle.cs" />
     <Compile Include="ReverseEntityFetcherItem.cs" />
     <Compile Include="FetcherFactory.cs" />
     <Compile Include="IEntityFetcher.cs" />

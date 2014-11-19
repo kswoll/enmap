@@ -41,6 +41,7 @@ namespace Enmap
     public interface IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForExpression<TSource, TDestination, TContext, TDestinationValue> where TContext : MapperContext
     {
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch();
+        IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline();
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After(Func<TDestination, TContext, Task> action);
     }
@@ -174,7 +175,7 @@ namespace Enmap
             private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;
             private Expression<Func<TSource, TContext, TSourceValue>> fromProperty;
             private List<Func<object, object, Task>> afterActions = new List<Func<object, object, Task>>();
-            private bool fetch;
+            private RelationshipMappingStyle relationshipMappingStyle = RelationshipMappingStyle.Default;
 
             public ForFromExpression(ForExpression<TDestinationValue> forExpression, Expression<Func<TSource, TContext, TSourceValue>> fromProperty) : base(forExpression)
             {
@@ -203,9 +204,21 @@ namespace Enmap
                 get { return fromProperty; }
             }
 
-            public bool IsFetch
+            public RelationshipMappingStyle RelationshipMappingStyle
             {
-                get { return fetch; }
+                get {  return relationshipMappingStyle; }
+            }
+
+            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
+            {
+                relationshipMappingStyle = RelationshipMappingStyle.Inline;
+                return this;
+            }
+
+            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
+            {
+                relationshipMappingStyle = RelationshipMappingStyle.Fetch;
+                return this;
             }
 
             public async Task CopyValueToDestination(object transientValue, object destination, object context)
@@ -231,12 +244,6 @@ namespace Enmap
                     throw new Exception(string.Format("Error assigning '{0}' of type {1} to destination '{2}' of type {3}",
                         Name, transientValue == null ? "null" : transientValue.GetType().FullName, Property.GetPropertyName(), Property.GetPropertyInfo().PropertyType.FullName), e);
                 }
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
-            {
-                this.fetch = true;
-                return this;
             }
 
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
@@ -271,6 +278,11 @@ namespace Enmap
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
             {
                 return forFromExpression.Fetch();
+            }
+
+            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
+            {
+                return forFromExpression.Inline();
             }
 
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)

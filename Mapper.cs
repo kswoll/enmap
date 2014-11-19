@@ -288,10 +288,14 @@ namespace Enmap
 
                     if (itemMapper != null)
                     {
-                        if (item.From.IsProperty())
+                        if (item.From.IsProperty() && item.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
+                        {
                             applicators.Add(new FetchSequenceItemApplicator(item, typeof(TContext), itemMapper));
-                        else 
+                        }
+                        else
+                        {
                             applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
+                        }
                     }
                     else
                     {
@@ -303,7 +307,7 @@ namespace Enmap
                     var itemMapper = Get(item.SourceType, item.DestinationType);
                     if (itemMapper != null)
                     {
-                        if (item.IsFetch)
+                        if (item.RelationshipMappingStyle == RelationshipMappingStyle.Fetch)
                         {
                             var relationship = item.From.GetPropertyInfo();
                             var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
