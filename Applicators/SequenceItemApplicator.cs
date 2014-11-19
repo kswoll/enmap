@@ -59,7 +59,7 @@ namespace Enmap.Applicators
                 var destinationItem = await mapper.ObjectMapTransientTo(item, context);
                 destinationValue.Add(destinationItem);
             }
-            await Item.CopyValueToDestination(destinationValue, destination, context);
+            await CopyValueToDestination(destinationValue, destination, context);
         }
     }
 }

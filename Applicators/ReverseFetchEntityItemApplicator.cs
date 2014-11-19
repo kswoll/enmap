@@ -52,7 +52,7 @@ namespace Enmap.Applicators
             var id = (int)transientProperty.GetValue(source, null);
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
-            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, dependentMapper, id, async x => await Item.CopyValueToDestination(x, destination, context)));
+            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, dependentMapper, id, async x => await CopyValueToDestination(x, destination, context)));
         }
     }
 }

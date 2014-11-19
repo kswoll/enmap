@@ -45,7 +45,7 @@ namespace Enmap.Applicators
         public override async Task CopyToDestination(object source, object destination, MapperContext context)
         {
             var transientValue = transientProperty.GetValue(source, null);
-            await Item.CopyValueToDestination(transientValue, destination, context);
+            await CopyValueToDestination(transientValue, destination, context);
         }
     }
 }

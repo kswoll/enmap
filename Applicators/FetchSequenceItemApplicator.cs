@@ -69,7 +69,7 @@ namespace Enmap.Applicators
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
             context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, mapper, id, async x => destinationValue.Add(x)));
-            await Item.CopyValueToDestination(destinationValue, destination, context);
+            await CopyValueToDestination(destinationValue, destination, context);
         }
     }
 }

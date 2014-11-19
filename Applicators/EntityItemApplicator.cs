@@ -49,7 +49,7 @@ namespace Enmap.Applicators
         {
             var transientValue = transientProperty.GetValue(source, null);
             var destinationValue = transientValue == null ? null : await mapper.ObjectMapTransientTo(transientValue, context);
-            await Item.CopyValueToDestination(destinationValue, destination, context);
+            await CopyValueToDestination(destinationValue, destination, context);
         }
     }
 }

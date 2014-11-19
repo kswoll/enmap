@@ -26,7 +26,7 @@ namespace Enmap
     public interface IMapperBuilder<TSource, TDestination, TContext> : IMapperBuilder where TContext : MapperContext
     {
         MapperRegistry<TContext> Registry { get; }
-        Mapper<TSource, TDestination, TContext> Finish();
+        new Mapper<TSource, TDestination, TContext> Finish();
         IEnumerable<IMapperItem> Items { get; }
         IForExpression<TSource, TDestination, TContext, TValue> For<TValue>(Expression<Func<TDestination, TValue>> property);
     }
@@ -44,11 +44,6 @@ namespace Enmap
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline();
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> After(Func<TDestination, TContext, Task> action);
-    }
-
-    public interface IForWhenExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> where TContext : MapperContext
-    {
-        
     }
 
     public static class MapperExtensions
@@ -199,6 +194,11 @@ namespace Enmap
                 get { return typeof(TDestinationValue); }
             }
 
+            public LambdaExpression For
+            {
+                get {  return forExpression.Property; }
+            }
+
             public LambdaExpression From
             {
                 get { return fromProperty; }
@@ -207,6 +207,11 @@ namespace Enmap
             public RelationshipMappingStyle RelationshipMappingStyle
             {
                 get {  return relationshipMappingStyle; }
+            }
+
+            public Func<object, object, Task<object>> Transposer
+            {
+                get { return async (x, context) => transposer == null ? x : await transposer((TSourceValue)x, (TContext)context); }
             }
 
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
@@ -219,31 +224,6 @@ namespace Enmap
             {
                 relationshipMappingStyle = RelationshipMappingStyle.Fetch;
                 return this;
-            }
-
-            public async Task CopyValueToDestination(object transientValue, object destination, object context)
-            {
-                if (transposer != null)
-                {
-                    try
-                    {
-                        transientValue = await transposer((TSourceValue)transientValue, (TContext)context);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception(string.Format("Error assigning '{0}' of type {1} to destination '{2}' of type {3}",
-                            Name, transientValue == null ? "null" : transientValue.GetType().FullName, Property.GetPropertyName(), Property.GetPropertyInfo().PropertyType.FullName), e);
-                    }
-                }
-                try
-                {
-                    Property.GetPropertyInfo().SetValue(destination, transientValue);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception(string.Format("Error assigning '{0}' of type {1} to destination '{2}' of type {3}",
-                        Name, transientValue == null ? "null" : transientValue.GetType().FullName, Property.GetPropertyName(), Property.GetPropertyInfo().PropertyType.FullName), e);
-                }
             }
 
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
@@ -295,22 +275,6 @@ namespace Enmap
                 return forFromExpression.After(action);
             }
         }
-
-
-/*
-
-        public class ForWhenExpression<TDestinationValue, TSourceValue> : ForFromExpressionAdapter<TDestinationValue, TSourceValue>, IForWhenExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>
-        {
-            private ForFromExpression<TDestinationValue, TSourceValue> forExpression;
-            private Func<TSource, TContext, bool> predicate;
-
-            public ForWhenExpression(ForFromExpression<TDestinationValue, TSourceValue> forExpression, Func<TSource, TContext, bool> predicate) : base(forExpression)
-            {
-                this.forExpression = forExpression;
-                this.predicate = predicate;
-            }
-        }
-*/
     }
 
     public class MapperBuilderAdapter<TSource, TDestination, TContext> : IMapperBuilder<TSource, TDestination, TContext> where TContext : MapperContext
