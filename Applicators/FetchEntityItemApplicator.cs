@@ -22,7 +22,11 @@ namespace Enmap.Applicators
         {
             this.dependentMapper = dependentMapper;
             this.mapper = mapper;
-            entityIdProperty = dependentMapper.SourceType.GetProperty(item.From.GetPropertyInfo().Name + "Id");  //Todo: get from EF metadata
+
+            var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == dependentMapper.SourceType.FullName);
+            var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == item.From.GetPropertyInfo().Name);
+            var association = (AssociationType)navigationProperty.RelationshipType;
+            entityIdProperty = dependentMapper.SourceType.GetProperty(association.Constraint.FromProperties[0].Name); 
         }
 
         public override void Commit()

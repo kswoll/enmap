@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -11,7 +12,6 @@ namespace Enmap.Applicators
 {
     public class ReverseFetchEntityItemApplicator : MapperItemApplicator
     {
-        private Mapper primaryMapper;
         private Mapper dependentMapper;
         private PropertyInfo transientProperty;
         private PropertyInfo primaryIdProperty;
@@ -19,9 +19,10 @@ namespace Enmap.Applicators
 
         public ReverseFetchEntityItemApplicator(Mapper primaryMapper, IMapperItem item, Type contextType, Mapper dependentMapper) : base(item, contextType)
         {
-            this.primaryMapper = primaryMapper;
             this.dependentMapper = dependentMapper;
-            primaryIdProperty = primaryMapper.SourceType.GetProperty("Id");  //Todo: get from EF metadata
+
+            var entitySet = primaryMapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == primaryMapper.SourceType.FullName);
+            primaryIdProperty = primaryMapper.SourceType.GetProperty(entitySet.ElementType.KeyProperties[0].Name);
             relationship = item.From.GetPropertyInfo();
         }
 

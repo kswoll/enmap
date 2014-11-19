@@ -24,7 +24,8 @@ namespace Enmap.Applicators
 
             var entity = item.From.Parameters.First();
             var entityType = entity.Type;
-            var idProperty = entityType.GetProperty("Id");  // Todo: read from EF meta data
+            var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == entityType.FullName);
+            var idProperty = entityType.GetProperty(entitySet.ElementType.KeyProperties[0].Name);
             primaryKey = Expression.Lambda(Expression.MakeMemberAccess(entity, idProperty), entity, item.From.Parameters[1]);
 
             relationship = item.From.GetPropertyInfo();
