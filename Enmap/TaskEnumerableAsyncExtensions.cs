@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -28,6 +29,19 @@ namespace Enmap
         {
             var result = await source;
             return result.SingleOrDefault();
+        }
+
+        public static async Task<T> SingleOrExceptionAsync<T>(this Task<IEnumerable<T>> source, Func<Exception, Exception> onException)
+        {
+            var result = await source;
+            try
+            {
+                return result.Single();
+            }
+            catch (Exception e)
+            {
+                throw onException(e);
+            }
         }
     }
 }
