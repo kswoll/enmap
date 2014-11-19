@@ -28,6 +28,7 @@ namespace Enmap.Applicators
             get { return item; }
         }
 
+        public virtual void Commit() {}
         public abstract void BuildTransientType(TypeBuilder type);
         public abstract IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType);
         public abstract Task CopyToDestination(object source, object destination, MapperContext context);

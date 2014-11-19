@@ -9,6 +9,7 @@ namespace Enmap.Applicators
 {
     public interface IMapperItemApplicator
     {
+        void Commit(); 
         void BuildTransientType(TypeBuilder type);
         IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType);
         Task CopyToDestination(object source, object destination, MapperContext context);

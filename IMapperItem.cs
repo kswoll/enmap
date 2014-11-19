@@ -13,5 +13,6 @@ namespace Enmap
         LambdaExpression From { get; }
         Task CopyValueToDestination(object transientValue, object destination, object context);
         IEnumerable<Func<object, object, Task>> AfterTasks { get; }
+        bool IsFetch { get; }
     }
 }

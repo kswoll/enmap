@@ -50,15 +50,21 @@
   <ItemGroup>
     <Compile Include="Applicators\DefaultItemApplicator.cs" />
     <Compile Include="Applicators\EntityItemApplicator.cs" />
+    <Compile Include="Applicators\FetchEntityItemApplicator.cs" />
     <Compile Include="Applicators\FetchSequenceItemApplicator.cs" />
     <Compile Include="Applicators\IMapperItemApplicator.cs" />
     <Compile Include="Applicators\MapperItemApplicator.cs" />
+    <Compile Include="Applicators\ReverseFetchEntityItemApplicator.cs" />
     <Compile Include="Applicators\SequenceItemApplicator.cs" />
     <Compile Include="Applicators\SequenceToScalarItemApplicator.cs" />
     <Compile Include="EntityFetcherItem.cs" />
+    <Compile Include="ReverseEntityFetcherItem.cs" />
     <Compile Include="FetcherFactory.cs" />
     <Compile Include="IEntityFetcher.cs" />
     <Compile Include="IEntityFetcherItem.cs" />
+    <Compile Include="IFetcherItem.cs" />
+    <Compile Include="IRerverseEntityFetcher.cs" />
+    <Compile Include="IReverseEntityFetcherItem.cs" />
     <Compile Include="IMapperItem.cs" />
     <Compile Include="MapperContext.cs" />
     <Compile Include="MapperGenerator.cs" />

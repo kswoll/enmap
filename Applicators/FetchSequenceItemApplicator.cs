@@ -16,7 +16,6 @@ namespace Enmap.Applicators
         private Mapper mapper;
         private PropertyInfo transientProperty;
         private LambdaExpression primaryKey;
-        private Type entityType;
         private PropertyInfo relationship;
 
         public FetchSequenceItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
@@ -24,12 +23,16 @@ namespace Enmap.Applicators
             this.mapper = mapper;
 
             var entity = item.From.Parameters.First();
-            entityType = entity.Type;
+            var entityType = entity.Type;
             var idProperty = entityType.GetProperty("Id");  // Todo: read from EF meta data
             primaryKey = Expression.Lambda(Expression.MakeMemberAccess(entity, idProperty), entity, item.From.Parameters[1]);
 
             relationship = item.From.GetPropertyInfo();
+        }
 
+        public override void Commit()
+        {
+            base.Commit();
             mapper.DemandFetcher(relationship);       // Demand that a fetcher be available for mapping based on the enclosing entity type
         }
 
@@ -63,18 +66,9 @@ namespace Enmap.Applicators
             var id = (int)transientProperty.GetValue(source, null);
 
             var destinationValue = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(mapper.DestinationType));
-/*
-            foreach (var item in transientValue)
-            {
-                var destinationItem = await mapper.ObjectMapTransientTo(item, context);
-                destinationValue.Add(destinationItem);
-            }
-            await Item.CopyValueToDestination(destinationValue, destination, context);
-*/
-
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
-            context.AddFetcherItem(new EntityFetcherItem(relationship, mapper, id, async x => destinationValue.Add(x)));
+            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, mapper, id, async x => destinationValue.Add(x)));
             await Item.CopyValueToDestination(destinationValue, destination, context);
         }
     }

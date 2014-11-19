@@ -9,7 +9,7 @@ namespace Enmap
     public class MapperContext
     {
         private List<Func<Task>> fixupTasks = new List<Func<Task>>();
-        private List<IEntityFetcherItem> fetcherItems = new List<IEntityFetcherItem>();
+        private List<IFetcherItem> fetcherItems = new List<IFetcherItem>();
         private object lockObject = new object();
         private DbContext dbContext;
         private bool applyingFetcher;
@@ -18,7 +18,7 @@ namespace Enmap
         {
             this.dbContext = dbContext;
         }
-
+            
         public DbContext DbContext
         {
             get { return dbContext; }
@@ -37,12 +37,11 @@ namespace Enmap
             }
         }
 
-        public void AddFetcherItem(IEntityFetcherItem item)
+        public void AddFetcherItem(IFetcherItem item)
         {
             lock (lockObject)
             {
-                if (!fetcherItems.Any(x => x.EntityId == item.EntityId && x.PrimaryEntityRelationship == item.PrimaryEntityRelationship && x.DependentEntityMapper == item.DependentEntityMapper))
-                    fetcherItems.Add(item);
+                fetcherItems.Add(item);
             }
         }
 
@@ -53,7 +52,7 @@ namespace Enmap
         /// </summary>
         public async Task ApplyFetcher()
         {
-            IEntityFetcherItem[] items;
+            IFetcherItem[] items;
             lock (lockObject)
             {
                 if (applyingFetcher) 
@@ -64,17 +63,19 @@ namespace Enmap
             }
             while (items.Any())
             {
-                foreach (var fetcherGroup in items.GroupBy(x => new { x.PrimaryEntityRelationship, x.DependentEntityMapper }))
+                foreach (var fetcherGroup in items.OfType<IReverseEntityFetcherItem>().GroupBy(x => new { x.PrimaryEntityRelationship, x.DependentEntityMapper }))
                 {
                     var primaryEntityRelationship = fetcherGroup.Key.PrimaryEntityRelationship;
                     var dependentEntityMapper = fetcherGroup.Key.DependentEntityMapper;
-                    var dependentEntityType = dependentEntityMapper.SourceType;
                     var fetcher = dependentEntityMapper.GetFetcher(primaryEntityRelationship);
                     await fetcher.Apply(fetcherGroup, this);
-
-//                    await fetcher.Apply(fetcherGroup);
                 }
-                var itemsSet = new HashSet<IEntityFetcherItem>(items);
+                foreach (var fetcherGroup in items.OfType<IEntityFetcherItem>().GroupBy(x => x.Mapper))
+                {
+                    var fetcher = fetcherGroup.Key.GetFetcher();
+                    await fetcher.Apply(fetcherGroup, this);
+                }
+                var itemsSet = new HashSet<IFetcherItem>(items);
                 lock (lockObject)
                 {
                     fetcherItems.RemoveAll(x => itemsSet.Contains(x));
@@ -82,7 +83,5 @@ namespace Enmap
                 }
             }
         }
-
-//        private List<>
     }
 }

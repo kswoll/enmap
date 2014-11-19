@@ -26,6 +26,7 @@ namespace Enmap
         }
 
         protected abstract void Commit();
+        internal abstract void Finish();
         protected abstract IEnumerable<IMapperItem> GetItems();
 
         public abstract Type SourceType { get; }
@@ -34,8 +35,10 @@ namespace Enmap
         public abstract ProjectionBuilder Projection { get; }
         public abstract Task<object> ObjectMapTransientTo(object transient, object context);
         public abstract void DemandFetcher(PropertyInfo entityRelationship);
+        public abstract void DemandFetcher();
         public abstract IMapperRegistry Registry { get; }
-        public abstract IEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship);
+        public abstract IEntityFetcher GetFetcher();
+        public abstract IRerverseEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship);
         public abstract Task<IEnumerable> ObjectMapTo(IQueryable query, MapperContext context);
         public abstract Task ObjectMapTo(IQueryable query, Func<object, object, Task> transformer, MapperContext context);
 
@@ -60,6 +63,10 @@ namespace Enmap
             foreach (var mapper in mappers)
             {
                 mapper.Commit();
+            }
+            foreach (var current in mappers)
+            {
+                current.Finish();
             }
         }
 
@@ -92,7 +99,8 @@ namespace Enmap
         private ProjectionBuilder projection;
         private List<IMapperItemApplicator> applicators = new List<IMapperItemApplicator>();
         private List<Func<object, object, Task>> afterTasks = new List<Func<object, object, Task>>();
-        private Dictionary<PropertyInfo, IEntityFetcher> fetchers = new Dictionary<PropertyInfo, IEntityFetcher>();
+        private IEntityFetcher primaryFetcher;
+        private Dictionary<PropertyInfo, IRerverseEntityFetcher> fetchers = new Dictionary<PropertyInfo, IRerverseEntityFetcher>();
         private List<Tuple<PropertyInfo, PropertyInfo>> navigationProperties = new List<Tuple<PropertyInfo, PropertyInfo>>();
 
         public Mapper(IMapperBuilder<TSource, TDestination, TContext> builder) : base(typeof(TSource), typeof(TDestination))
@@ -141,6 +149,14 @@ namespace Enmap
             get { return projection; }
         }
 
+        internal override void Finish()
+        {
+            foreach (var applicator in applicators)
+            {
+                applicator.Commit();
+            }
+        }
+
         /// <summary>
         /// Initializes this mapper.  This method is called *after* the list of mappers has been sorted
         /// according to dependencies, thus any target mappers will already be realized since they will 
@@ -172,6 +188,12 @@ namespace Enmap
 
             // Add foreign keys
             var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == typeof(TSource).FullName);
+            foreach (var property in entitySet.ElementType.KeyProperties)
+            {
+                var entityProperty = typeof(TSource).GetProperty(property.Name);
+                var transientProperty = type.DefineProperty("__" + entityProperty.Name, entityProperty.PropertyType);
+                navigationProperties.Add(new Tuple<PropertyInfo, PropertyInfo>(entityProperty, transientProperty));
+            }
             foreach (var navigationProperty in entitySet.ElementType.NavigationProperties)
             {
                 if (navigationProperty.RelationshipType is AssociationType)
@@ -182,6 +204,10 @@ namespace Enmap
                         var keyColumn = association.Constraint.ToProperties[0].Name;
                         var efProperty = association.Constraint.ToProperties[0];
                         var entityProperty = typeof(TSource).GetProperty(efProperty.Name);
+                        if (navigationProperties.Any(x => x.Item1.Name == entityProperty.Name))
+                        {
+                            continue;
+                        }
                         var property = type.DefineProperty("__" + keyColumn, entityProperty.PropertyType);
                         navigationProperties.Add(new Tuple<PropertyInfo, PropertyInfo>(entityProperty, property));
                     }
@@ -254,7 +280,7 @@ namespace Enmap
                     }                    
                 }
 */
-                if (item.SourceType.IsGenericEnumerable() && item.DestinationType.IsGenericList())
+                if (item.SourceType.IsGenericEnumerable() && item.DestinationType.IsGenericEnumerable())
                 {
                     var sourceType = item.SourceType.GetGenericArgument(typeof(IEnumerable<>), 0);
                     var destinationType = item.DestinationType.GetGenericArgument(typeof(IEnumerable<>), 0);
@@ -277,7 +303,26 @@ namespace Enmap
                     var itemMapper = Get(item.SourceType, item.DestinationType);
                     if (itemMapper != null)
                     {
-                        applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));
+                        if (item.IsFetch)
+                        {
+                            var relationship = item.From.GetPropertyInfo();
+                            var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
+                            var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == relationship.Name);
+                            var association = navigationProperty.RelationshipType as AssociationType;
+
+                            if (association.Constraint.FromProperties[0].DeclaringType.FullName == relationship.DeclaringType.FullName)
+                            {
+                                applicators.Add(new ReverseFetchEntityItemApplicator(this, item, typeof(TContext), itemMapper));
+                            }
+                            else
+                            {
+                                applicators.Add(new FetchEntityItemApplicator(this, item, typeof(TContext), itemMapper));
+                            }
+                        }
+                        else
+                        {
+                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));                            
+                        }
                     }
                     else
                     {
@@ -326,12 +371,6 @@ namespace Enmap
             return MapTo((IQueryable<TSource>)query, async (id, destination) => await transformer(id, destination), (TContext)context);
         }
 
-        public async Task<TDestination> MapTo(TSource source, TContext context = default(TContext))
-        {
-            var result = await MapTo(new[] { source }.AsQueryable(), context);
-            return result.Single();
-        }
-
         /// <summary>
         /// This should generally only be called internally (or by extensions) to map a transient type to the 
         /// destination type.
@@ -373,9 +412,23 @@ namespace Enmap
             }
         }
 
-        public override IEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship)
+        public override void DemandFetcher()
         {
-            return fetchers[primaryEntityRelationship];
+            if (primaryFetcher != null)
+                primaryFetcher = FetcherFactory.CreateFetcher(this);
+        }
+
+        public override IEntityFetcher GetFetcher()
+        {
+            return primaryFetcher;
+        }
+
+        public override IRerverseEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship)
+        {
+            IRerverseEntityFetcher result;
+            if (!fetchers.TryGetValue(primaryEntityRelationship, out result))
+                throw new Exception("No fetcher registered for: " + primaryEntityRelationship.DeclaringType.FullName + "." + primaryEntityRelationship.Name);
+            return result;
         }
 
         public override IMapperRegistry Registry
