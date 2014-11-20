@@ -10,9 +10,9 @@ namespace Enmap
         public Mapper DependentEntityMapper { get; set; }
         public object EntityId { get; set; }
 
-        private Func<object, Task> fetchApplier;
+        private Func<object[], Task> fetchApplier;
 
-        public ReverseEntityFetcherItem(PropertyInfo primaryEntityRelationship, Mapper dependentEntityMapper, object entityId, Func<object, Task> fetchApplier)
+        public ReverseEntityFetcherItem(PropertyInfo primaryEntityRelationship, Mapper dependentEntityMapper, object entityId, Func<object[], Task> fetchApplier)
         {
             this.fetchApplier = fetchApplier;
 
@@ -23,7 +23,7 @@ namespace Enmap
 
         public Task ApplyFetchedValue(object value)
         {
-            return fetchApplier(value);
+            return fetchApplier((object[])value);
         }
     }
 }

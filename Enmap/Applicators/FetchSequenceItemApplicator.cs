@@ -68,11 +68,15 @@ namespace Enmap.Applicators
         {
             var id = (int)transientProperty.GetValue(source, null);
 
-            var destinationValue = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(mapper.DestinationType));
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
-            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, mapper, id, async x => destinationValue.Add(x)));
-            await CopyValueToDestination(destinationValue, destination, context);
+            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, mapper, id, async x =>
+            {
+                var destinationValue = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(mapper.DestinationType));
+                foreach (var o in x)
+                    destinationValue.Add(o);
+                await CopyValueToDestination(destinationValue, destination, context);
+            }));
         }
     }
 }
