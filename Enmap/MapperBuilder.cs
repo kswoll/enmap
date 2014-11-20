@@ -223,7 +223,7 @@ namespace Enmap
             }
         }
 
-        public class ForFromExpression<TDestinationValue, TSourceValue> : ForExpressionAdapter<TDestinationValue>, IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>, IMapperItem
+        public class ForFromExpression<TDestinationValue, TSourceValue> : ForExpressionAdapter<TDestinationValue>, IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>, IDirectMapperItem
         {
             private ForExpression<TDestinationValue> forExpression;
             private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;

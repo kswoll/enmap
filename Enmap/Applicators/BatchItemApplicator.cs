@@ -53,7 +53,8 @@ namespace Enmap.Applicators
         public async Task CopyToDestination(object source, object destination, MapperContext context)
         {
             var transientValue = transientProperty.GetValue(source, null);
-            context.AddFetcherItem(new BatchFetcherItem(destination, item.For.GetPropertyInfo(), transientValue, item.BatchProcessor));
+            if (transientValue != null)
+                context.AddFetcherItem(new BatchFetcherItem(destination, item.For.GetPropertyInfo(), transientValue, item.BatchProcessor));
         }
 
         class BatchFetcherItem : IBatchFetcherItem
@@ -66,6 +67,8 @@ namespace Enmap.Applicators
 
             public BatchFetcherItem(object destination, PropertyInfo destinationProperty, object entityId, IBatchProcessor batchProcessor)
             {
+                if (entityId == null)
+                    throw new Exception();
                 this.destination = destination;
                 this.destinationProperty = destinationProperty;
 

@@ -34,9 +34,6 @@ namespace Enmap
 
                 var primaryEntityType = primaryEntityRelationship.DeclaringType;
 
-                where = typeof(Queryable).GetMethods().Single(x => x.Name == "Where" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(dependentMapper.SourceType);
-                contains = typeof(Enumerable).GetMethods().Single(x => x.Name == "Contains" && x.GetParameters().Length == 2).MakeGenericMethod(typeof(int));
-
                 var primaryEntitySet = dependentMapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == primaryEntityType.FullName);
                 var primaryNavigationProperty = primaryEntitySet.ElementType.NavigationProperties.Single(x => x.Name == primaryEntityRelationship.Name);
                 var association = (AssociationType)primaryNavigationProperty.RelationshipType;
@@ -44,6 +41,8 @@ namespace Enmap
 
                 primaryEntityPropertyTransient = dependentMapper.TransientType.GetProperty("__" + primaryEntityProperty.Name);
                 cast = typeof(Enumerable).GetMethod("Cast").MakeGenericMethod(primaryEntityPropertyTransient.PropertyType);
+                where = typeof(Queryable).GetMethods().Single(x => x.Name == "Where" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(dependentMapper.SourceType);
+                contains = typeof(Enumerable).GetMethods().Single(x => x.Name == "Contains" && x.GetParameters().Length == 2).MakeGenericMethod(primaryEntityPropertyTransient.PropertyType);
             }
 
             public async Task Apply(IEnumerable<IReverseEntityFetcherItem> items, MapperContext context)
@@ -93,22 +92,20 @@ namespace Enmap
                 this.mapper = mapper;
 
                 var primaryEntityType = mapper.SourceType;
-
-                where = typeof(Queryable).GetMethods().Single(x => x.Name == "Where" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(mapper.SourceType);
-                contains = typeof(Enumerable).GetMethods().Single(x => x.Name == "Contains" && x.GetParameters().Length == 2).MakeGenericMethod(typeof(int));
-
                 var primaryEntitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == primaryEntityType.FullName);
                 var primaryNavigationProperty = primaryEntitySet.ElementType.KeyProperties[0];
                 primaryEntityProperty = mapper.SourceType.GetProperty(primaryNavigationProperty.Name);
                 primaryEntityTransientProperty = mapper.TransientType.GetProperty("__" + primaryEntityProperty.Name);
                 cast = typeof(Enumerable).GetMethod("Cast").MakeGenericMethod(primaryEntityProperty.PropertyType);
+                where = typeof(Queryable).GetMethods().Single(x => x.Name == "Where" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(mapper.SourceType);
+                contains = typeof(Enumerable).GetMethods().Single(x => x.Name == "Contains" && x.GetParameters().Length == 2).MakeGenericMethod(primaryEntityTransientProperty.PropertyType);
             }
 
             public async Task Apply(IEnumerable<IEntityFetcherItem> items, MapperContext context)
             {
                 // Assemble ids
                 var ids = cast.Invoke(null, new[] { items.Select(x => x.EntityId).ToArray() });
-                var itemsById = items.ToDictionary(x => x.EntityId);
+                var itemsById = items.ToLookup(x => x.EntityId);
 
                 // Our queryable object from which we can grab the dependent items
                 var dbSet = context.DbContext.Set(mapper.SourceType);
@@ -125,8 +122,11 @@ namespace Enmap
                     async (transient, destination) =>
                     {
                         var primaryEntityKey = primaryEntityTransientProperty.GetValue(transient, null);
-                        var item = itemsById[primaryEntityKey];
-                        await item.ApplyFetchedValue(destination);
+                        var itemSet = itemsById[primaryEntityKey];
+                        foreach (var item in itemSet)
+                        {
+                            await item.ApplyFetchedValue(destination);
+                        }
                     }, 
                     context);
                     

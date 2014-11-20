@@ -26,7 +26,7 @@ namespace Enmap.Applicators
             var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == dependentMapper.SourceType.FullName);
             var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == item.From.GetPropertyInfo().Name);
             var association = (AssociationType)navigationProperty.RelationshipType;
-            entityIdProperty = dependentMapper.SourceType.GetProperty(association.Constraint.FromProperties[0].Name); 
+            entityIdProperty = dependentMapper.SourceType.GetProperty(association.Constraint.ToProperties[0].Name); 
         }
 
         public override void Commit()
@@ -53,7 +53,7 @@ namespace Enmap.Applicators
 
         public override async Task CopyToDestination(object source, object destination, MapperContext context)
         {
-            var id = (int)transientProperty.GetValue(source, null);
+            var id = transientProperty.GetValue(source, null);
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
             context.AddFetcherItem(new EntityFetcherItem(mapper, id, async x => await CopyValueToDestination(x, destination, context)));

@@ -17,6 +17,7 @@ namespace Enmap.Applicators
         private PropertyInfo transientProperty;
         private LambdaExpression primaryKey;
         private PropertyInfo relationship;
+        private Type propertyType;
 
         public FetchSequenceItemApplicator(IDirectMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
@@ -27,6 +28,7 @@ namespace Enmap.Applicators
             var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == entityType.FullName);
             var idProperty = entityType.GetProperty(entitySet.ElementType.KeyProperties[0].Name);
             primaryKey = Expression.Lambda(Expression.MakeMemberAccess(entity, idProperty), entity, item.From.Parameters[1]);
+            propertyType = idProperty.PropertyType;
 
             relationship = item.From.GetPropertyInfo();
         }
@@ -39,7 +41,7 @@ namespace Enmap.Applicators
 
         public override void BuildTransientType(TypeBuilder type)
         {
-            type.DefineProperty(Item.Name, typeof(int));
+            type.DefineProperty(Item.Name, propertyType);
         }
 
         public override IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType)

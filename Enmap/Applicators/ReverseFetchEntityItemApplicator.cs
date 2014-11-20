@@ -34,7 +34,7 @@ namespace Enmap.Applicators
 
         public override void BuildTransientType(TypeBuilder type)
         {
-            type.DefineProperty(Item.Name, typeof(int));
+            type.DefineProperty(Item.Name, primaryIdProperty.PropertyType);
         }
 
         public override IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType)
