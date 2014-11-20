@@ -12,7 +12,6 @@ namespace Enmap
         private List<IFetcherItem> fetcherItems = new List<IFetcherItem>();
         private object lockObject = new object();
         private DbContext dbContext;
-        private bool applyingFetcher;
 
         public MapperContext(DbContext dbContext)
         {
@@ -60,11 +59,8 @@ namespace Enmap
             IFetcherItem[] items;
             lock (lockObject)
             {
-                if (applyingFetcher) 
-                    return;
-                applyingFetcher = true;
-
                 items = fetcherItems.ToArray();
+                fetcherItems.Clear();
             }
             while (items.Any())
             {
