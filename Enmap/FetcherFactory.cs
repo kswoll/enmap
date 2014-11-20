@@ -117,7 +117,8 @@ namespace Enmap
             public async Task Apply(IEnumerable<IEntityFetcherItem> items, MapperContext context)
             {
                 // Assemble ids
-                var ids = cast.Invoke(null, new[] { items.Select(x => x.EntityId).ToArray() });
+                var uncastIds = items.Select(x => x.EntityId).ToArray();
+                var ids = cast.Invoke(null, new[] { uncastIds });
                 var itemsById = items.ToLookup(x => x.EntityId);
 
                 // Our queryable object from which we can grab the dependent items

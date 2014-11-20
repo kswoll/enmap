@@ -12,6 +12,9 @@ namespace Enmap
 
         public EntityFetcherItem(Mapper mapper, object entityId, Func<object, Task> fetchApplier)
         {
+            if (entityId == null)
+                throw new Exception("entityId cannot be null");
+
             this.fetchApplier = fetchApplier;
             Mapper = mapper;
             EntityId = entityId;

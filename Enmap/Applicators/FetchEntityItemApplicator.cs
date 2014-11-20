@@ -56,7 +56,8 @@ namespace Enmap.Applicators
             var id = transientProperty.GetValue(source, null);
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
-            context.AddFetcherItem(new EntityFetcherItem(mapper, id, async x => await CopyValueToDestination(x, destination, context)));
+            if (id != null)
+                context.AddFetcherItem(new EntityFetcherItem(mapper, id, async x => await CopyValueToDestination(x, destination, context)));
         }
     }
 }
