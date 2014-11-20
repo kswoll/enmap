@@ -8,12 +8,12 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public abstract class MapperItemApplicator : IMapperItemApplicator
+    public abstract class DirectMapperItemApplicator : IMapperItemApplicator
     {
-        private IMapperItem item;
+        private IDirectMapperItem item;
         private Type contextType;
 
-        public MapperItemApplicator(IMapperItem item, Type contextType)
+        public DirectMapperItemApplicator(IDirectMapperItem item, Type contextType)
         {
             this.item = item;
             this.contextType = contextType;
@@ -24,7 +24,7 @@ namespace Enmap.Applicators
             get { return contextType; }
         }
 
-        public IMapperItem Item
+        public IDirectMapperItem Item
         {
             get { return item; }
         }

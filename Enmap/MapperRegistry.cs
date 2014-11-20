@@ -10,9 +10,25 @@ namespace Enmap
     {
         EntityContainer Metadata { get; }
         Type DbContextType { get; }
+        Mapper Get<TSource, TDestination>();
     }
 
-    public class MapperRegistry<TContext> : IMapperRegistry where TContext : MapperContext
+    public class MapperRegistry 
+    {
+        private static Dictionary<Type, IMapperRegistry> registries = new Dictionary<Type, IMapperRegistry>();
+
+        internal MapperRegistry(Type dbContextType)
+        {
+            registries[dbContextType] = (IMapperRegistry)this;
+        }
+
+        public static IMapperRegistry Get(Type dbContextType)
+        {
+            return registries[dbContextType];
+        }
+    }
+
+    public class MapperRegistry<TContext> : MapperRegistry, IMapperRegistry where TContext : MapperContext
     {
         private List<IMapperBuilder> mapperBuilders = new List<IMapperBuilder>();
         private List<Mapper> mappers = new List<Mapper>();
@@ -36,7 +52,7 @@ namespace Enmap
             return objectContext.MetadataWorkspace.GetEntityContainer(objectContext.DefaultContainerName, DataSpace.CSpace);
         }
 
-        public MapperRegistry(Type dbContextType, EntityContainer metadata, Action<MapperRegistry<TContext>> register = null)
+        public MapperRegistry(Type dbContextType, EntityContainer metadata, Action<MapperRegistry<TContext>> register = null) : base(dbContextType)
         {
             this.dbContextType = dbContextType;
             this.metadata = metadata;
@@ -80,6 +96,11 @@ namespace Enmap
             var expression = new MapperGenerator<TContext>().Map<TSource, TDestination>(this);
             mapperBuilders.Add(expression);
             return expression;
+        }
+
+        Mapper IMapperRegistry.Get<TSource, TDestination>()
+        {
+            return Get<TSource, TDestination>();
         }
 
         public Mapper<TSource, TDestination, TContext> Get<TSource, TDestination>()

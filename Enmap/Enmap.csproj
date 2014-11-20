@@ -48,16 +48,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Applicators\BatchItemApplicator.cs" />
     <Compile Include="Applicators\DefaultItemApplicator.cs" />
     <Compile Include="Applicators\EntityItemApplicator.cs" />
     <Compile Include="Applicators\FetchEntityItemApplicator.cs" />
     <Compile Include="Applicators\FetchSequenceItemApplicator.cs" />
     <Compile Include="Applicators\IMapperItemApplicator.cs" />
-    <Compile Include="Applicators\MapperItemApplicator.cs" />
+    <Compile Include="Applicators\DirectMapperItemApplicator.cs" />
     <Compile Include="Applicators\ReverseFetchEntityItemApplicator.cs" />
     <Compile Include="Applicators\SequenceItemApplicator.cs" />
     <Compile Include="Applicators\SequenceToScalarItemApplicator.cs" />
+    <Compile Include="BatchProcessor.cs" />
     <Compile Include="EntityFetcherItem.cs" />
+    <Compile Include="IBatchFetcherItem.cs" />
+    <Compile Include="IBatchMapperItem.cs" />
+    <Compile Include="IDirectMapperItem.cs" />
+    <Compile Include="MapperBuilder.cs" />
+    <Compile Include="MapperBuilderAdapter.cs" />
+    <Compile Include="MapperExtensions.cs" />
+    <Compile Include="Utils\AnonymousTypeCloner.cs" />
     <Compile Include="Utils\MetadataExtensions.cs" />
     <Compile Include="RelationshipMappingStyle.cs" />
     <Compile Include="ReverseEntityFetcherItem.cs" />
@@ -69,7 +78,7 @@
     <Compile Include="IReverseEntityFetcherItem.cs" />
     <Compile Include="IMapperItem.cs" />
     <Compile Include="MapperContext.cs" />
-    <Compile Include="MapperGenerator.cs" />
+    <Compile Include="Interfaces.cs" />
     <Compile Include="Mapper.cs" />
     <Compile Include="MapperRegistry.cs" />
     <Compile Include="Projections\ProjectionBuilder.cs" />

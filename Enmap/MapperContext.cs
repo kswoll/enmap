@@ -18,7 +18,12 @@ namespace Enmap
         {
             this.dbContext = dbContext;
         }
-            
+
+        public IMapperRegistry Registry
+        {
+            get { return MapperRegistry.Get(dbContext.GetType()); }
+        }
+
         public DbContext DbContext
         {
             get { return dbContext; }
@@ -73,6 +78,11 @@ namespace Enmap
                 foreach (var fetcherGroup in items.OfType<IEntityFetcherItem>().GroupBy(x => x.Mapper))
                 {
                     var fetcher = fetcherGroup.Key.GetFetcher();
+                    await fetcher.Apply(fetcherGroup, this);
+                }
+                foreach (var fetcherGroup in items.OfType<IBatchFetcherItem>().GroupBy(x => x.BatchProcessor))
+                {
+                    var fetcher = fetcherGroup.Key;
                     await fetcher.Apply(fetcherGroup, this);
                 }
                 var itemsSet = new HashSet<IFetcherItem>(items);

@@ -10,14 +10,14 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class ReverseFetchEntityItemApplicator : MapperItemApplicator
+    public class ReverseFetchEntityItemApplicator : DirectMapperItemApplicator
     {
         private Mapper dependentMapper;
         private PropertyInfo transientProperty;
         private PropertyInfo primaryIdProperty;
         private PropertyInfo relationship;
 
-        public ReverseFetchEntityItemApplicator(Mapper primaryMapper, IMapperItem item, Type contextType, Mapper dependentMapper) : base(item, contextType)
+        public ReverseFetchEntityItemApplicator(Mapper primaryMapper, IDirectMapperItem item, Type contextType, Mapper dependentMapper) : base(item, contextType)
         {
             this.dependentMapper = dependentMapper;
 
