@@ -3,13 +3,30 @@ using System.Threading.Tasks;
 
 namespace Enmap
 {
-    public abstract class BatchProcessor<TDestination, TContext> : IBatchProcessor<TDestination> where TContext : MapperContext
+    public class BatchProcessor<TDestination, TContext> : IBatchProcessor<TDestination> where TContext : MapperContext
     {
-        protected abstract Task Apply(IEnumerable<IBatchFetcherItem> items, TContext context);
+        public delegate Task BatchApplier(IEnumerable<IBatchFetcherItem> items, TContext context);
+
+        private BatchApplier applier;
+
+        protected BatchProcessor()
+        {
+        }
+
+        public BatchProcessor(BatchApplier applier)
+        {
+            this.applier = applier;
+        }
 
         public Task Apply(IEnumerable<IBatchFetcherItem> items, MapperContext context)
         {
             return Apply(items, (TContext)context);
+        }
+
+        protected virtual async Task Apply(IEnumerable<IBatchFetcherItem> items, TContext context)
+        {
+            if (applier != null)
+                await applier(items, context);
         }
     }
 }

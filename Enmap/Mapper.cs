@@ -103,6 +103,7 @@ namespace Enmap
         private IEntityFetcher primaryFetcher;
         private Dictionary<PropertyInfo, IRerverseEntityFetcher> fetchers = new Dictionary<PropertyInfo, IRerverseEntityFetcher>();
         private List<Tuple<PropertyInfo, PropertyInfo>> navigationProperties = new List<Tuple<PropertyInfo, PropertyInfo>>();
+        private PropertyInfo[] primarykeyProperties;
 
         public Mapper(IMapperBuilder<TSource, TDestination, TContext> builder) : base(typeof(TSource), typeof(TDestination))
         {
@@ -192,6 +193,7 @@ namespace Enmap
                 var transientProperty = type.DefineProperty("__" + entityProperty.Name, entityProperty.PropertyType);
                 navigationProperties.Add(new Tuple<PropertyInfo, PropertyInfo>(entityProperty, transientProperty));
             }
+            primarykeyProperties = navigationProperties.Select(x => x.Item2).ToArray();
             foreach (var navigationProperty in entitySet.ElementType.NavigationProperties)
             {
                 if (navigationProperty.RelationshipType is AssociationType)
@@ -406,18 +408,28 @@ namespace Enmap
         /// <param name="transient">An instance of the transient type produced by this mapper.</param>
         /// <param name="context">The context that may contain custom behavior to influence mapping.</param>
         /// <returns>An instance of TDestination with the values of transient copied over.</returns>
-        public async Task<TDestination> MapTransientTo(object transient, TContext context = default(TContext))
+        public async Task<TDestination> MapTransientTo(object transient, TContext context)
         {
             var destination = (TDestination)Activator.CreateInstance(typeof(TDestination));
+            context.Cache(typeof(TSource), GenerateKey(transient), transient);
             foreach (var applicator in applicators)
             {
                 await applicator.CopyToDestination(transient, destination, context);
-            }            
+            }
             foreach (var afterTask in afterTasks)
             {
                 await afterTask(destination, context);
             }
             return destination;
+        }
+
+        private object GenerateKey(object transient)
+        {
+            var keyValues = primarykeyProperties.Select(x => x.GetValue(transient, null)).ToArray();
+            if (keyValues.Length == 1)
+                return keyValues[0];
+            else
+                return TupleFactory.CreateTuple(keyValues);
         }
 
         /// <summary>

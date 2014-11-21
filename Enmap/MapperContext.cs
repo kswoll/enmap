@@ -12,6 +12,7 @@ namespace Enmap
         private List<IFetcherItem> fetcherItems = new List<IFetcherItem>();
         private object lockObject = new object();
         private DbContext dbContext;
+        private Dictionary<Tuple<Type, object>, object> cache = new Dictionary<Tuple<Type, object>, object>();
 
         public MapperContext(DbContext dbContext)
         {
@@ -26,6 +27,18 @@ namespace Enmap
         public DbContext DbContext
         {
             get { return dbContext; }
+        }
+
+        internal void Cache(Type type, object key, object value)
+        {
+            cache[Tuple.Create(type, key)] = value;
+        }
+
+        public object GetFromCache(Type type, object key)
+        {
+            object value;
+            cache.TryGetValue(Tuple.Create(type, key), out value);
+            return value;
         }
 
         public void AddFixup(Func<Task> task)

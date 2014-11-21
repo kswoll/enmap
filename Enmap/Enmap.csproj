@@ -103,6 +103,7 @@
     <Compile Include="Utils\GenericExtensions.cs" />
     <Compile Include="Utils\LambdaBinder.cs" />
     <Compile Include="Utils\SweepSorter.cs" />
+    <Compile Include="Utils\TupleFactory.cs" />
     <Compile Include="Utils\TypeBuilderUtils.cs" />
   </ItemGroup>
   <ItemGroup>
