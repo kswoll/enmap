@@ -103,7 +103,7 @@ namespace Enmap
         private IEntityFetcher primaryFetcher;
         private Dictionary<PropertyInfo, IRerverseEntityFetcher> fetchers = new Dictionary<PropertyInfo, IRerverseEntityFetcher>();
         private List<Tuple<PropertyInfo, PropertyInfo>> navigationProperties = new List<Tuple<PropertyInfo, PropertyInfo>>();
-        private PropertyInfo[] primarykeyProperties;
+        private PropertyInfo[] primaryKeyProperties;
 
         public Mapper(IMapperBuilder<TSource, TDestination, TContext> builder) : base(typeof(TSource), typeof(TDestination))
         {
@@ -193,7 +193,7 @@ namespace Enmap
                 var transientProperty = type.DefineProperty("__" + entityProperty.Name, entityProperty.PropertyType);
                 navigationProperties.Add(new Tuple<PropertyInfo, PropertyInfo>(entityProperty, transientProperty));
             }
-            primarykeyProperties = navigationProperties.Select(x => x.Item2).ToArray();
+            primaryKeyProperties = navigationProperties.Select(x => x.Item2).ToArray();
             foreach (var navigationProperty in entitySet.ElementType.NavigationProperties)
             {
                 if (navigationProperty.RelationshipType is AssociationType)
@@ -221,6 +221,7 @@ namespace Enmap
 
             transientType = type.CreateType();
 
+            primaryKeyProperties = primaryKeyProperties.Select(x => transientType.GetProperty(x.Name)).ToArray();
             for (var i = 0; i < navigationProperties.Count; i++)
             {
                 var property = navigationProperties[i];
@@ -425,7 +426,7 @@ namespace Enmap
 
         private object GenerateKey(object transient)
         {
-            var keyValues = primarykeyProperties.Select(x => x.GetValue(transient, null)).ToArray();
+            var keyValues = primaryKeyProperties.Select(x => x.GetValue(transient, null)).ToArray();
             if (keyValues.Length == 1)
                 return keyValues[0];
             else
