@@ -13,6 +13,7 @@ namespace Enmap
         private object lockObject = new object();
         private DbContext dbContext;
         private Dictionary<Tuple<Type, object>, object> cache = new Dictionary<Tuple<Type, object>, object>();
+        private List<Tuple<Func<object, object, Task>, object, MapperContext>> afterTasks = new List<Tuple<Func<object, object, Task>, object, MapperContext>>();
 
         public MapperContext(DbContext dbContext)
         {
@@ -67,39 +68,60 @@ namespace Enmap
         /// then applied as well.  This process is applied indefinitely until there are no more fetchers 
         /// to fetch.
         /// </summary>
-        public async Task ApplyFetcher()
+        public async Task Finish()
         {
             IFetcherItem[] items;
+            Tuple<Func<object, object, Task>, object, MapperContext>[] tasks;
             lock (lockObject)
             {
                 items = fetcherItems.ToArray();
                 fetcherItems.Clear();
+                tasks = afterTasks.ToArray();
             }
-            while (items.Any())
+            while (items.Any() || tasks.Any())
             {
-                foreach (var fetcherGroup in items.OfType<IReverseEntityFetcherItem>().GroupBy(x => new { x.PrimaryEntityRelationship, x.DependentEntityMapper }))
+                if (items.Any())
                 {
-                    var primaryEntityRelationship = fetcherGroup.Key.PrimaryEntityRelationship;
-                    var dependentEntityMapper = fetcherGroup.Key.DependentEntityMapper;
-                    var fetcher = dependentEntityMapper.GetFetcher(primaryEntityRelationship);
-                    await fetcher.Apply(fetcherGroup, this);
+                    foreach (var fetcherGroup in items.OfType<IReverseEntityFetcherItem>().GroupBy(x => new { x.PrimaryEntityRelationship, x.DependentEntityMapper }))
+                    {
+                        var primaryEntityRelationship = fetcherGroup.Key.PrimaryEntityRelationship;
+                        var dependentEntityMapper = fetcherGroup.Key.DependentEntityMapper;
+                        var fetcher = dependentEntityMapper.GetFetcher(primaryEntityRelationship);
+                        await fetcher.Apply(fetcherGroup, this);
+                    }
+                    foreach (var fetcherGroup in items.OfType<IEntityFetcherItem>().GroupBy(x => x.Mapper))
+                    {
+                        var fetcher = fetcherGroup.Key.GetFetcher();
+                        await fetcher.Apply(fetcherGroup, this);
+                    }
+                    foreach (var fetcherGroup in items.OfType<IBatchFetcherItem>().GroupBy(x => x.BatchProcessor))
+                    {
+                        var fetcher = fetcherGroup.Key;
+                        await fetcher.Apply(fetcherGroup, this);
+                    }
+                    var itemsSet = new HashSet<IFetcherItem>(items);
+                    lock (lockObject)
+                    {
+                        fetcherItems.RemoveAll(x => itemsSet.Contains(x));
+                        items = fetcherItems.ToArray();
+                        tasks = afterTasks.ToArray();
+                    }                    
                 }
-                foreach (var fetcherGroup in items.OfType<IEntityFetcherItem>().GroupBy(x => x.Mapper))
+                else
                 {
-                    var fetcher = fetcherGroup.Key.GetFetcher();
-                    await fetcher.Apply(fetcherGroup, this);
+                    foreach (var task in tasks)
+                    {
+                        task.Item1(task.Item2, task.Item2);
+                    }
                 }
-                foreach (var fetcherGroup in items.OfType<IBatchFetcherItem>().GroupBy(x => x.BatchProcessor))
-                {
-                    var fetcher = fetcherGroup.Key;
-                    await fetcher.Apply(fetcherGroup, this);
-                }
-                var itemsSet = new HashSet<IFetcherItem>(items);
-                lock (lockObject)
-                {
-                    fetcherItems.RemoveAll(x => itemsSet.Contains(x));
-                    items = fetcherItems.ToArray();
-                }
+            }
+        }
+
+        public void AddAfterTasks(IEnumerable<Tuple<Func<object, object, Task>, object, MapperContext>> tasks)
+        {
+            lock (lockObject)
+            {
+                afterTasks.AddRange(tasks);
             }
         }
     }

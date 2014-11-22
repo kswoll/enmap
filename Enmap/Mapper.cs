@@ -389,7 +389,7 @@ namespace Enmap
             }
 
             // Mapping is complete, it's now time to apply post mapping behavior, such as making subsequent fetch queries.
-            await context.ApplyFetcher();
+            await context.Finish();
         }
 
         public override async Task<IEnumerable> ObjectMapTo(IQueryable query, MapperContext context)
@@ -417,10 +417,7 @@ namespace Enmap
             {
                 await applicator.CopyToDestination(transient, destination, context);
             }
-            foreach (var afterTask in afterTasks)
-            {
-                await afterTask(destination, context);
-            }
+            context.AddAfterTasks(afterTasks.Select(x => new Tuple<Func<object, object, Task>, object, MapperContext>(x, destination, context)));
             return destination;
         }
 

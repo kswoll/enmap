@@ -250,3 +250,19 @@ aforementioned property reference.  In contrast, the `.To(...)` method is run in
 
 The final result is that you get to define all these translations in a clean way that fully encapsulates various translations
 at the precise place where the mapping is declared in the first place.
+
+Creating Behavior That Executes _After_ the Entity Has Been Mapped
+-----
+
+Sometimes you want to perform behavior that only executes _after_ the regular mapping has occurred.  For example, you might want
+to assign a model property by consuming properties that have already been properly mapped.  To do this, you can use the `.After`
+operator.  This method allows you to define behavior that executes in just this situation.
+
+One common scenario in which you might want to leverage this 
+
+Limitations:
+
+* You are guaranteed that the your `.After` operator is invoked after the normal SQL projection has occurred.  However, there is 
+_no_ guarantee that your particular `.After` operator has been invoked before or after any others.  Furthermore, any fetch-based
+results are only reified _after_ all the `.After` operators for every entity has been executed.  So bear in mind this is only 
+useful for _immediate_ values -- those values that are immediately obtained from the result of the EF query.  
