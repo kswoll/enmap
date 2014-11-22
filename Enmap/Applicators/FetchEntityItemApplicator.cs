@@ -11,14 +11,14 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class FetchEntityItemApplicator : DirectMapperItemApplicator
+    public class FetchEntityItemApplicator : MapperItemApplicator
     {
         private Mapper dependentMapper;
         private Mapper mapper;
         private PropertyInfo transientProperty;
         private PropertyInfo entityIdProperty;
 
-        public FetchEntityItemApplicator(Mapper dependentMapper, IDirectMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        public FetchEntityItemApplicator(Mapper dependentMapper, IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
             this.dependentMapper = dependentMapper;
             this.mapper = mapper;

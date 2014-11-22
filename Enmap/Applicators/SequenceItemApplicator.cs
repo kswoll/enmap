@@ -11,12 +11,12 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class SequenceItemApplicator : DirectMapperItemApplicator
+    public class SequenceItemApplicator : MapperItemApplicator
     {
         private Mapper mapper;
         private PropertyInfo transientProperty;
 
-        public SequenceItemApplicator(IDirectMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        public SequenceItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
             this.mapper = mapper;
         }

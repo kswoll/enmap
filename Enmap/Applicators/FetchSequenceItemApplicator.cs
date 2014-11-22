@@ -11,7 +11,7 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class FetchSequenceItemApplicator : DirectMapperItemApplicator
+    public class FetchSequenceItemApplicator : MapperItemApplicator
     {
         private Mapper mapper;
         private PropertyInfo transientProperty;
@@ -19,7 +19,7 @@ namespace Enmap.Applicators
         private PropertyInfo relationship;
         private Type propertyType;
 
-        public FetchSequenceItemApplicator(IDirectMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        public FetchSequenceItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
             this.mapper = mapper;
 

@@ -27,11 +27,6 @@ namespace Enmap
             return expression.From((Expression<Func<TSource, TContext, TSourceValue>>)property.AppendParameters(typeof(TContext)));
         }
 
-        public static IBatchExpression<TSource, TDestination, TContext, TValue> Collect<TSource, TDestination, TContext, TValue, TSourceValue>(this IBatchExpression<TSource, TDestination, TContext, TValue> expression, Expression<Func<TSource, TSourceValue>> property) where TContext : MapperContext
-        {
-            return expression.Collect((Expression<Func<TSource, TContext, TSourceValue>>)property.AppendParameters(typeof(TContext)));
-        }
-
         public static IMapperBuilder<TSource, TDestination, TContext> After<TSource, TDestination, TContext>(this IMapperBuilder<TSource, TDestination, TContext> expression, Func<TDestination, Task> action) where TContext : MapperContext
         {
             return expression.After(async (x, context) => await action(x));
@@ -45,6 +40,12 @@ namespace Enmap
         public static IMapperBuilder<TSource, TDestination, TContext> After<TSource, TDestination, TContext>(this IMapperBuilder<TSource, TDestination, TContext> expression, Action<TDestination> action) where TContext : MapperContext
         {
             return expression.After(async x => action(x));
+        }
+
+        public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Batch<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, 
+            BatchApplier<TSourceValue, TContext> applier) where TContext : MapperContext
+        {
+            return expression.Batch(new BatchProcessor<TSourceValue, TDestinationValue, TContext>(applier));
         }
 
 /*

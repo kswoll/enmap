@@ -35,6 +35,11 @@ namespace Enmap
             cache[Tuple.Create(type, key)] = value;
         }
 
+        public T GetFromCache<T>(object key)
+        {
+            return (T)GetFromCache(typeof(T), key);
+        }
+
         public object GetFromCache(Type type, object key)
         {
             object value;

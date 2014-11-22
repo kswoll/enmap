@@ -9,11 +9,11 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class DefaultItemApplicator : DirectMapperItemApplicator
+    public class DefaultItemApplicator : MapperItemApplicator
     {
         private PropertyInfo transientProperty;
 
-        public DefaultItemApplicator(IDirectMapperItem item, Type contextType) : base(item, contextType)
+        public DefaultItemApplicator(IMapperItem item, Type contextType) : base(item, contextType)
         {
         }
 

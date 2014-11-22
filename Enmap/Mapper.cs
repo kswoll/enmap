@@ -57,7 +57,7 @@ namespace Enmap
                     destinationType = destinationType.GetGenericArgument(typeof(IList<>), 0);
                 return Get(sourceType, destinationType);
             };
-            Func<Mapper, Mapper[]> subSelector = x => x.GetItems().OfType<IDirectMapperItem>().Select(y => getMapper(y.SourceType, y.DestinationType)).Where(y => y != null).ToArray();
+            Func<Mapper, Mapper[]> subSelector = x => x.GetItems().Select(y => getMapper(y.SourceType, y.DestinationType)).Where(y => y != null).ToArray();
             CycleDetector.DetectCycles(mappers, subSelector);
             mappers = SweepSorter.SweepSort(mappers, subSelector);
             foreach (var mapper in mappers)
@@ -265,85 +265,62 @@ namespace Enmap
         {
             foreach (var item in builder.Items)
             {
-                if (item is IDirectMapperItem)
+                if (item.BatchProcessor != null)
                 {
-                    var directItem = (IDirectMapperItem)item;
-
-/*
-                if (item.SourceType.IsGenericEnumerable() && !item.DestinationType.IsGenericList())
+                    applicators.Add(new BatchItemApplicator(item, typeof(TContext)));
+                }
+                else if (item.SourceType.IsGenericEnumerable() && item.DestinationType.IsGenericEnumerable())
                 {
                     var sourceType = item.SourceType.GetGenericArgument(typeof(IEnumerable<>), 0);
-                    var destinationType = item.DestinationType;
+                    var destinationType = item.DestinationType.GetGenericArgument(typeof(IEnumerable<>), 0);
                     var itemMapper = Get(sourceType, destinationType);
 
                     if (itemMapper != null)
                     {
-                        applicators.Add(new SequenceToScalarItemApplicator(item, typeof(TContext), itemMapper));
+                        if (item.From.IsProperty() && item.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
+                        {
+                            applicators.Add(new FetchSequenceItemApplicator(item, typeof(TContext), itemMapper));
+                        }
+                        else
+                        {
+                            applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
+                        }
                     }
                     else
                     {
                         applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
-                    }                    
+                    }
                 }
-*/
-                    if (directItem.SourceType.IsGenericEnumerable() && directItem.DestinationType.IsGenericEnumerable())
+                else
+                {
+                    var itemMapper = Get(item.SourceType, item.DestinationType);
+                    if (itemMapper != null)
                     {
-                        var sourceType = directItem.SourceType.GetGenericArgument(typeof(IEnumerable<>), 0);
-                        var destinationType = directItem.DestinationType.GetGenericArgument(typeof(IEnumerable<>), 0);
-                        var itemMapper = Get(sourceType, destinationType);
-
-                        if (itemMapper != null)
+                        if (item.RelationshipMappingStyle == RelationshipMappingStyle.Fetch)
                         {
-                            if (directItem.From.IsProperty() && directItem.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
+                            var relationship = item.From.GetPropertyInfo();
+                            var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
+                            var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == relationship.Name);
+                            var association = navigationProperty.RelationshipType as AssociationType;
+
+                            if (association.Constraint.FromProperties[0].DeclaringType.FullName == relationship.DeclaringType.FullName)
                             {
-                                applicators.Add(new FetchSequenceItemApplicator(directItem, typeof(TContext), itemMapper));
+                                applicators.Add(new ReverseFetchEntityItemApplicator(this, item, typeof(TContext), itemMapper));
                             }
                             else
                             {
-                                applicators.Add(new SequenceItemApplicator(directItem, typeof(TContext), itemMapper));
+                                applicators.Add(new FetchEntityItemApplicator(this, item, typeof(TContext), itemMapper));
                             }
                         }
                         else
                         {
-                            applicators.Add(new DefaultItemApplicator(directItem, typeof(TContext)));
+                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));                            
                         }
                     }
                     else
                     {
-                        var itemMapper = Get(directItem.SourceType, directItem.DestinationType);
-                        if (itemMapper != null)
-                        {
-                            if (directItem.RelationshipMappingStyle == RelationshipMappingStyle.Fetch)
-                            {
-                                var relationship = directItem.From.GetPropertyInfo();
-                                var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
-                                var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == relationship.Name);
-                                var association = navigationProperty.RelationshipType as AssociationType;
-
-                                if (association.Constraint.FromProperties[0].DeclaringType.FullName == relationship.DeclaringType.FullName)
-                                {
-                                    applicators.Add(new ReverseFetchEntityItemApplicator(this, directItem, typeof(TContext), itemMapper));
-                                }
-                                else
-                                {
-                                    applicators.Add(new FetchEntityItemApplicator(this, directItem, typeof(TContext), itemMapper));
-                                }
-                            }
-                            else
-                            {
-                                applicators.Add(new EntityItemApplicator(directItem, typeof(TContext), itemMapper));                            
-                            }
-                        }
-                        else
-                        {
-                            applicators.Add(new DefaultItemApplicator(directItem, typeof(TContext)));
-                        }
+                        applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
                     }
-                }
-                else if (item is IBatchMapperItem)
-                {
-                    var batchItem = (IBatchMapperItem)item;
-                    applicators.Add(new BatchItemApplicator(batchItem, typeof(TContext)));
                 }
 /*
                 else if (item is IWithMapperItem)
@@ -412,7 +389,7 @@ namespace Enmap
         public async Task<TDestination> MapTransientTo(object transient, TContext context)
         {
             var destination = (TDestination)Activator.CreateInstance(typeof(TDestination));
-            context.Cache(typeof(TSource), GenerateKey(transient), transient);
+            context.Cache(typeof(TDestination), GenerateKey(transient), destination);
             foreach (var applicator in applicators)
             {
                 await applicator.CopyToDestination(transient, destination, context);

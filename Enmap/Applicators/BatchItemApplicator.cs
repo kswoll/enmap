@@ -11,11 +11,11 @@ namespace Enmap.Applicators
 {
     public class BatchItemApplicator : IMapperItemApplicator
     {
-        private IBatchMapperItem item;
+        private IMapperItem item;
         private PropertyInfo transientProperty;
         private Type contextType;
 
-        public BatchItemApplicator(IBatchMapperItem item, Type contextType)
+        public BatchItemApplicator(IMapperItem item, Type contextType)
         {
             this.item = item;
             this.contextType = contextType;
@@ -46,7 +46,7 @@ namespace Enmap.Applicators
         public IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, MapperContext context)
         {
             var binder = new LambdaBinder();
-            var result = binder.BindBody(item.Collector, obj, Expression.Constant(context, contextType));
+            var result = binder.BindBody(item.From, obj, Expression.Constant(context, contextType));
             yield return Expression.Bind(transientProperty, result);
         }
 

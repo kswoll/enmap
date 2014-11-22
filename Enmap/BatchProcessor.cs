@@ -1,19 +1,20 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Enmap
 {
-    public class BatchProcessor<TDestination, TContext> : IBatchProcessor<TDestination> where TContext : MapperContext
-    {
-        public delegate Task BatchApplier(IEnumerable<IBatchFetcherItem> items, TContext context);
+    public delegate Task BatchApplier<TSource, in TContext>(IEnumerable<BatchItem<TSource>> items, TContext context) where TContext : MapperContext;
 
-        private BatchApplier applier;
+    public class BatchProcessor<TSource, TDestination, TContext> : IBatchProcessor<TDestination> where TContext : MapperContext
+    {
+        private BatchApplier<TSource, TContext> applier;
 
         protected BatchProcessor()
         {
         }
 
-        public BatchProcessor(BatchApplier applier)
+        public BatchProcessor(BatchApplier<TSource, TContext> applier)
         {
             this.applier = applier;
         }
@@ -26,7 +27,7 @@ namespace Enmap
         protected virtual async Task Apply(IEnumerable<IBatchFetcherItem> items, TContext context)
         {
             if (applier != null)
-                await applier(items, context);
+                await applier(items.Select(x => new BatchItem<TSource>(x)), context);
         }
     }
 }

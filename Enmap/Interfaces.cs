@@ -53,22 +53,23 @@ namespace Enmap
     {
         Expression<Func<TDestination, TValue>> Property { get; }
         IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property);
-        IBatchExpression<TSource, TDestination, TContext, TValue> Batch(IBatchProcessor<TValue> batchProcessor);
+//        IBatchExpression<TSource, TDestination, TContext, TValue> Batch(IBatchProcessor<TValue> batchProcessor);
     }
 
-    public interface IBatchExpression<TSource, TDestination, TContext, TValue> : IForExpression<TSource, TDestination, TContext, TValue> where TContext : MapperContext
-    {
-        IBatchCollectExpression<TSource, TDestination, TContext, TValue, TSourceValue> Collect<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property);
-    }
-
-    public interface IBatchCollectExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IBatchExpression<TSource, TDestination, TContext, TDestinationValue> where TContext : MapperContext
-    {
-    }
+//    public interface IBatchExpression<TSource, TDestination, TContext, TValue> : IForExpression<TSource, TDestination, TContext, TValue> where TContext : MapperContext
+//    {
+//        IBatchCollectExpression<TSource, TDestination, TContext, TValue, TSourceValue> Collect<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property);
+//    }
+//
+//    public interface IBatchCollectExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IBatchExpression<TSource, TDestination, TContext, TDestinationValue> where TContext : MapperContext
+//    {
+//    }
 
     public interface IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForExpression<TSource, TDestination, TContext, TDestinationValue> where TContext : MapperContext
     {
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch();
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline();
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
+        IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor);
     }
 }

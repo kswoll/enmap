@@ -8,12 +8,12 @@ using Enmap.Utils;
 
 namespace Enmap.Applicators
 {
-    public class EntityItemApplicator : DirectMapperItemApplicator
+    public class EntityItemApplicator : MapperItemApplicator
     {
         private Mapper mapper;
         private PropertyInfo transientProperty;
 
-        public EntityItemApplicator(IDirectMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        public EntityItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
         {
             this.mapper = mapper;
         }

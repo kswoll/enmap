@@ -2,6 +2,6 @@
 {
     public enum RelationshipMappingStyle
     {
-        Default, Fetch, Inline
+        Default, Fetch, Inline, Batch
     }
 }
