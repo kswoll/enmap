@@ -247,3 +247,6 @@ errors will happen.  Here's an example of what that mapping might look like:
 The `.From(...)` clause is responsible for managing the SQL projection, and thus must be fairly simple, such as the 
 aforementioned property reference.  In contrast, the `.To(...)` method is run in a normal C# context, and thus calling
 `TimeSpan.FromSeconds(...)` is perfectly valid.        
+
+The final result is that you get to define all these translations in a clean way that fully encapsulates very translations
+at the precise place where the mapping is declared in the first place.
