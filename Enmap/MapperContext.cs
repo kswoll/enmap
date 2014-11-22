@@ -111,7 +111,7 @@ namespace Enmap
                 {
                     foreach (var task in tasks)
                     {
-                        task.Item1(task.Item2, task.Item2);
+                        task.Item1(task.Item2, task.Item3);
                     }
                 }
             }
