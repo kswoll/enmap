@@ -77,6 +77,7 @@ namespace Enmap
                 items = fetcherItems.ToArray();
                 fetcherItems.Clear();
                 tasks = afterTasks.ToArray();
+                afterTasks.Clear();
             }
             while (items.Any() || tasks.Any())
             {
