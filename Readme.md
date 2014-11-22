@@ -62,7 +62,7 @@ Finally, let's look at some examples of each of those techniques.
 Inline Single Entity Relationships
 -----
 
-For an inline single entity relationship, consider a `DbPerson` entity with a reference to an `DbAddress` entity:
+For an inline single entity relationship, consider a `DbPerson` entity with a reference to a `DbAddress` entity:
 
     public class DbPerson 
     {
@@ -154,7 +154,7 @@ Batch Based Behavior
 -----
 
 Sometimes you may have an id in your tables that represent an entity or object that does not actually exist in the 
-database.  Perhaps it's a key to a key/value store and all you have in the database is a GUID string.  The facilitate
+database.  Perhaps it's a key to a key/value store and all you have in the database is a GUID string.  To facilitate
 these scenarios, you can provide your own batch processing that works in a similar fashion to the fetch-based approaches
 outlined above.  To accomplish this, you must create a class that is responsible for fetching the external data.  This 
 should be an implementation of `IBatchProcessor` and implement its one method:
@@ -204,3 +204,46 @@ To set up a mapper for this using your batch processor, you'd have something lik
 This will set up a mapper that collects all the `PostId`s and then, via your implementation of `IBatchProcessor`,
 fetches all the posts at once from the key/value store and subsequently interleaves the results into the `Post` property
 of `Notification`.
+
+Adhoc Translations of Database Values to Model Values
+-----
+
+One of the most common problems with other mappers is they don't provide any straightforward way to further transform the 
+database value into the type expected in the model.  For example, you might store a `TimeSpan` value in the database as
+an int that represents seconds.  However, your model type might choose to surface this value as a `TimeSpan`.  If you want 
+to do this, you need to ensure that the `TimeSpan` transformation only happens _after_ the projected value has been resolved.
+With Enmap, this is trivial.  Supposing you have the following types:
+
+    public class DbJob
+    {
+        public int Id { get; set; }
+        public int Period { get; set; }
+    }
+
+    public class Job 
+    {
+        public int Id { get; set; }
+        public TimeSpan Period { get; set; }
+    }
+
+Here it's not straightforward to build a SQL projection that honors this mapping.  For example, this is illegal:
+
+    var jobs = db.Jobs.Select(x => new Job 
+    {
+        Id = x.Id,
+        Period = TimeSpan.FromSeconds(x.Period)
+    });
+
+The reason is that `TimeSpan.FromSeconds` is not "translatable to SQL".  However, all you _really_ want from the 
+database is the `Period` in seconds.  Once the query is complete, you just want to perform a translation that converts
+the int value in seconds to a `TimeSpan` value.  With Enmap, you simply need to use the `.To(...)` operator.  The
+contents of the function passed to `.To` is executed _after_ the query has been executed -- meaning no SQL translation 
+errors will happen.  Here's an example of what that mapping might look like:
+
+    Map<DbJob, Job>()
+        .For(x => x.Id).From(x => x.Id)
+        .For(x => x.Period).From(x => x.Period).To(x => TimeSpan.FromSeconds(x));
+
+The `.From(...)` clause is responsible for managing the SQL projection, and thus must be fairly simple, such as the 
+aforementioned property reference.  In contrast, the `.To(...)` method is run in a normal C# context, and thus calling
+`TimeSpan.FromSeconds(...)` is perfectly valid.        
