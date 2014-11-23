@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Enmap.Utils;
@@ -7,6 +9,29 @@ namespace Enmap
 {
     public static class MapperExtensions
     {
+        public static MapHelper<TSource> Map<TSource>(this IQueryable<TSource> query, MapperContext context) 
+        {
+            return new MapHelper<TSource>(query, context);
+        }        
+
+        public class MapHelper<TSource>
+        {
+            private IQueryable<TSource> query;
+            private MapperContext context;
+
+            public MapHelper(IQueryable<TSource> query, MapperContext context)
+            {
+                this.query = query;
+                this.context = context;
+            }
+
+            public async Task<IEnumerable<TDestination>> To<TDestination>()
+            {
+                var result = await context.Registry.Get<TSource, TDestination>().ObjectMapTo(query, context);
+                return result.Cast<TDestination>();
+            }                    
+        }
+
         public static IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> expression, Func<TSourceValue, Task<TDestinationValue>> transposer) where TContext : MapperContext
         {
             return expression.To((x, context) => transposer(x));
