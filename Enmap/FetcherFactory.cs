@@ -80,6 +80,14 @@ namespace Enmap
                         }
                     }, 
                     context);
+
+                foreach (var item in items)
+                {
+                    if (!destinationsByItem.ContainsKey(item))
+                    {
+                        destinationsByItem[item] = new List<object>();
+                    }
+                }
                     
                 await task;
                 foreach (var current in destinationsByItem)
