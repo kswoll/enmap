@@ -66,7 +66,7 @@ namespace Enmap.Applicators
 
         public override async Task CopyToDestination(object source, object destination, MapperContext context)
         {
-            var id = (int)transientProperty.GetValue(source, null);
+            var id = transientProperty.GetValue(source, null);
 
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
