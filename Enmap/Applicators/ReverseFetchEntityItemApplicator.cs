@@ -57,7 +57,11 @@ namespace Enmap.Applicators
             {
                 object value = x;
                 if (!relationship.PropertyType.IsGenericEnumerable())
+                {
+                    if (!x.Any())
+                        return;
                     value = x[0];
+                }
                 await CopyValueToDestination(value, destination, context);
             }));
         }
