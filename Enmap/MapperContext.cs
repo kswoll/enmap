@@ -105,6 +105,10 @@ namespace Enmap
                         var fetcher = fetcherGroup.Key;
                         await fetcher.Apply(fetcherGroup, this);
                     }
+                    foreach (var task in tasks)
+                    {
+                        task.Item1(task.Item2, task.Item3);
+                    }
                     var itemsSet = new HashSet<IFetcherItem>(items);
                     lock (lockObject)
                     {
@@ -112,13 +116,6 @@ namespace Enmap
                         items = fetcherItems.ToArray();
                         tasks = afterTasks.ToArray();
                     }                    
-                }
-                else
-                {
-                    foreach (var task in tasks)
-                    {
-                        task.Item1(task.Item2, task.Item3);
-                    }
                 }
             }
         }
