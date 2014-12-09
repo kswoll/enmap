@@ -54,8 +54,8 @@ namespace Enmap.Applicators
             }
             catch (Exception e)
             {
-                throw new Exception(string.Format("Error assigning '{0}' of type {1} to destination '{2}' of type {3}",
-                    Item.Name, transientValue == null ? "null" : transientValue.GetType().FullName, Item.For.GetPropertyName(), Item.For.GetPropertyInfo().PropertyType.FullName), e);
+                throw new Exception(string.Format("Error assigning '{0}.{1}' of type {2} to destination '{3}' of type {3}",
+                    Item.From.GetPropertyInfo().DeclaringType, Item.Name, transientValue == null ? "null" : transientValue.GetType().FullName, Item.For.GetPropertyName(), Item.For.GetPropertyInfo().PropertyType.FullName), e);
             }
         }
     }
