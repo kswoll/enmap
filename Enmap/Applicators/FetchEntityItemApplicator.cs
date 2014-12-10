@@ -23,10 +23,15 @@ namespace Enmap.Applicators
             this.dependentMapper = dependentMapper;
             this.mapper = mapper;
 
-            var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == dependentMapper.SourceType.FullName);
-            var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == item.From.GetPropertyInfo().Name);
+            var declaringType = item.From.GetPropertyInfo().DeclaringType;
+            var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == declaringType.FullName);
+            var navigationProperty = entitySet.ElementType.NavigationProperties.SingleOrDefault(x => x.Name == item.From.GetPropertyInfo().Name);
+            if (navigationProperty == null)
+                throw new Exception("Could not find navigation property for " + item.From.Body);
             var association = (AssociationType)navigationProperty.RelationshipType;
-            entityIdProperty = dependentMapper.SourceType.GetProperty(association.Constraint.ToProperties[0].Name); 
+            entityIdProperty = declaringType.GetProperty(association.Constraint.ToProperties[0].Name); 
+            if (entityIdProperty == null)
+                Console.WriteLine();
         }
 
         public override void Commit()
@@ -48,7 +53,13 @@ namespace Enmap.Applicators
 
         private IEnumerable<MemberBinding> BuildMemberBindings(ParameterExpression obj, MapperContext context)
         {
-            yield return Expression.Bind(transientProperty, Expression.MakeMemberAccess(obj, entityIdProperty));
+            Expression current = obj;
+            foreach (var property in Item.From.GetPropertyPath().Reverse().Skip(1).Reverse())
+            {
+                current = Expression.MakeMemberAccess(obj, property);
+            }
+
+            yield return Expression.Bind(transientProperty, Expression.MakeMemberAccess(current, entityIdProperty));
         }
 
         public override async Task CopyToDestination(object source, object destination, MapperContext context)
