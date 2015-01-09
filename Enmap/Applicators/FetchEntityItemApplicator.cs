@@ -30,8 +30,6 @@ namespace Enmap.Applicators
                 throw new Exception("Could not find navigation property for " + item.From.Body);
             var association = (AssociationType)navigationProperty.RelationshipType;
             entityIdProperty = declaringType.GetProperty(association.Constraint.ToProperties[0].Name); 
-            if (entityIdProperty == null)
-                Console.WriteLine();
         }
 
         public override void Commit()
