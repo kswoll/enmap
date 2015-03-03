@@ -60,21 +60,22 @@
   <ItemGroup>
     <Compile Include="Applicators\BatchItemApplicator.cs" />
     <Compile Include="Applicators\DefaultItemApplicator.cs" />
-    <Compile Include="Applicators\EntityItemApplicator.cs" />
     <Compile Include="Applicators\FetchEntityItemApplicator.cs" />
     <Compile Include="Applicators\FetchSequenceItemApplicator.cs" />
     <Compile Include="Applicators\IMapperItemApplicator.cs" />
     <Compile Include="Applicators\MapperItemApplicator.cs" />
     <Compile Include="Applicators\ReverseFetchEntityItemApplicator.cs" />
-    <Compile Include="Applicators\SequenceItemApplicator.cs" />
     <Compile Include="BatchItem.cs" />
     <Compile Include="BatchProcessor.cs" />
     <Compile Include="EntityFetcherItem.cs" />
     <Compile Include="IBatchFetcherItem.cs" />
+    <Compile Include="IGlobalCache.cs" />
     <Compile Include="MapperBuilder.cs" />
     <Compile Include="MapperBuilderAdapter.cs" />
     <Compile Include="MapperExtensions.cs" />
-    <Compile Include="Utils\AnonymousTypeCloner.cs" />
+    <Compile Include="Utils\FunctionalExpressionTrees.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Utils\MetadataExtensions.cs" />
     <Compile Include="RelationshipMappingStyle.cs" />
     <Compile Include="ReverseEntityFetcherItem.cs" />
@@ -95,9 +96,6 @@
     <Compile Include="Utils\Class.cs" />
     <Compile Include="Utils\CycleDetector.cs" />
     <Compile Include="Utils\DictionaryExtensions.cs" />
-    <Compile Include="Utils\ExpressionSimplifier.cs" />
-    <Compile Include="Utils\ExpressionWalker.cs" />
-    <Compile Include="Utils\FunctionalExpressionTrees.cs" />
     <Compile Include="Utils\GenericExtensions.cs" />
     <Compile Include="Utils\LambdaBinder.cs" />
     <Compile Include="Utils\SweepSorter.cs" />

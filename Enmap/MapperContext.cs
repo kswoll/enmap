@@ -88,16 +88,14 @@ namespace Enmap
             {
                 if (items.Any())
                 {
-                    foreach (var fetcherGroup in items.OfType<IReverseEntityFetcherItem>().GroupBy(x => new { x.PrimaryEntityRelationship, x.DependentEntityMapper }))
+                    foreach (var fetcherGroup in items.OfType<IReverseEntityFetcherItem>().GroupBy(x => new { x.PrimaryEntityType, x.PrimaryEntityRelationship, x.SourceType, x.DestinationType }))
                     {
-                        var primaryEntityRelationship = fetcherGroup.Key.PrimaryEntityRelationship;
-                        var dependentEntityMapper = fetcherGroup.Key.DependentEntityMapper;
-                        var fetcher = dependentEntityMapper.GetFetcher(primaryEntityRelationship);
+                        var fetcher = FetcherFactory.GetFetcher(Registry, fetcherGroup.Key.SourceType, fetcherGroup.Key.DestinationType, fetcherGroup.Key.PrimaryEntityType, fetcherGroup.Key.PrimaryEntityRelationship);
                         await fetcher.Apply(fetcherGroup, this);
                     }
-                    foreach (var fetcherGroup in items.OfType<IEntityFetcherItem>().GroupBy(x => x.Mapper))
+                    foreach (var fetcherGroup in items.OfType<IEntityFetcherItem>().GroupBy(x => Tuple.Create(x.SourceType, x.DestinationType)))
                     {
-                        var fetcher = fetcherGroup.Key.GetFetcher();
+                        var fetcher = FetcherFactory.GetFetcher(fetcherGroup.Key.Item1, fetcherGroup.Key.Item2);
                         await fetcher.Apply(fetcherGroup, this);
                     }
                     foreach (var fetcherGroup in items.OfType<IBatchFetcherItem>().GroupBy(x => x.BatchProcessor))

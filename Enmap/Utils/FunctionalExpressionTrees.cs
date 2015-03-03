@@ -57,21 +57,5 @@ namespace Enmap.Utils
         {
             return func.StubParameters(func.Parameters.Concat(appenededParameterTypes.Select(x => Expression.Parameter(x))).ToArray());
         }
-
-        public static Expression Simplify(this Expression expression)
-        {
-            return expression;
-            return ExpressionSimplifier.Simplify(expression);
-        }
-
-        public static T Simplify<T>(this T expression) where T : LambdaExpression
-        {
-            return (T) ExpressionSimplifier.Simplify(expression);
-        }
-
-        public static List<Expression> Walk(this Expression expression)
-        {
-            return ExpressionWalker.Walk(expression);
-        }
     }
 }

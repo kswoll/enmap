@@ -67,8 +67,6 @@ namespace Enmap
 
     public interface IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> : IForExpression<TSource, TDestination, TContext, TDestinationValue> where TContext : MapperContext
     {
-        IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch();
-        IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline();
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
         IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor);
     }

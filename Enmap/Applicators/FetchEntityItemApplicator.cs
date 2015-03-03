@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Linq;
@@ -13,29 +12,23 @@ namespace Enmap.Applicators
 {
     public class FetchEntityItemApplicator : MapperItemApplicator
     {
-        private Mapper dependentMapper;
-        private Mapper mapper;
+        private Type sourceType;
+        private Type destinationType;
         private PropertyInfo transientProperty;
         private PropertyInfo entityIdProperty;
 
-        public FetchEntityItemApplicator(Mapper dependentMapper, IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        public FetchEntityItemApplicator(IMapperRegistry registry, IMapperItem item, Type contextType, Type sourceType, Type destinationType) : base(item, contextType)
         {
-            this.dependentMapper = dependentMapper;
-            this.mapper = mapper;
+            this.sourceType = sourceType;
+            this.destinationType = destinationType;
 
             var declaringType = item.From.GetPropertyInfo().DeclaringType;
-            var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == declaringType.FullName);
+            var entitySet = registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == declaringType.FullName);
             var navigationProperty = entitySet.ElementType.NavigationProperties.SingleOrDefault(x => x.Name == item.From.GetPropertyInfo().Name);
             if (navigationProperty == null)
                 throw new Exception("Could not find navigation property for " + item.From.Body);
             var association = (AssociationType)navigationProperty.RelationshipType;
             entityIdProperty = declaringType.GetProperty(association.Constraint.ToProperties[0].Name); 
-        }
-
-        public override void Commit()
-        {
-            base.Commit();
-            mapper.DemandFetcher();
         }
 
         public override void BuildTransientType(TypeBuilder type)
@@ -66,7 +59,7 @@ namespace Enmap.Applicators
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
             if (id != null)
-                context.AddFetcherItem(new EntityFetcherItem(mapper, id, async x => await CopyValueToDestination(x, destination, context)));
+                context.AddFetcherItem(new EntityFetcherItem(sourceType, destinationType, id, async x => await CopyValueToDestination(x, destination, context)));
         }
     }
 }

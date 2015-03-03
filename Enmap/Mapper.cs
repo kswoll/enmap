@@ -18,11 +18,12 @@ namespace Enmap
 {
     public abstract class Mapper
     {
-        private static ConcurrentDictionary<Tuple<Type, Type>, Mapper> mappers = new ConcurrentDictionary<Tuple<Type, Type>, Mapper>();
+        private static ConcurrentDictionary<Type, ConcurrentDictionary<Type, Mapper>> mappers = new ConcurrentDictionary<Type, ConcurrentDictionary<Type, Mapper>>();
 
         protected Mapper(Type sourceType, Type destinationType)
         {
-            mappers[Tuple.Create(sourceType, destinationType)] = this;
+            var destinationTypesBySource = mappers.GetOrAdd(sourceType, x => new ConcurrentDictionary<Type, Mapper>());
+            destinationTypesBySource[destinationType] = this;
         }
 
         protected abstract void Commit();
@@ -34,11 +35,7 @@ namespace Enmap
         public abstract Type DestinationType { get; }
         public abstract ProjectionBuilder Projection { get; }
         public abstract Task<object> ObjectMapTransientTo(object transient, object context);
-        public abstract void DemandFetcher(PropertyInfo entityRelationship);
-        public abstract void DemandFetcher();
         public abstract IMapperRegistry Registry { get; }
-        public abstract IEntityFetcher GetFetcher();
-        public abstract IRerverseEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship);
         public abstract Task<IEnumerable> ObjectMapTo(IQueryable query, MapperContext context);
         public abstract Task ObjectMapTo(IQueryable query, Func<object, object, Task> transformer, MapperContext context);
 
@@ -80,10 +77,17 @@ namespace Enmap
             return (Mapper<TSource, TDestination, TContext>)Get(typeof(TSource), typeof(TDestination));
         }
 
+        public static Mapper[] GetMappersForSourceType(Type sourceType)
+        {
+            var destinationTypesBySource = mappers.GetOrAdd(sourceType, x => new ConcurrentDictionary<Type, Mapper>());
+            return destinationTypesBySource.Values.ToArray();
+        }
+
         public static Mapper Get(Type sourceType, Type destinationType)
         {
+            var destinationTypesBySource = mappers.GetOrAdd(sourceType, x => new ConcurrentDictionary<Type, Mapper>());
             Mapper result;
-            mappers.TryGetValue(Tuple.Create(sourceType, destinationType), out result);
+            destinationTypesBySource.TryGetValue(destinationType, out result);
             return result;
         }
     }
@@ -100,7 +104,6 @@ namespace Enmap
         private ProjectionBuilder projection;
         private List<IMapperItemApplicator> applicators = new List<IMapperItemApplicator>();
         private List<Func<object, object, Task>> afterTasks = new List<Func<object, object, Task>>();
-        private IEntityFetcher primaryFetcher;
         private Dictionary<PropertyInfo, IRerverseEntityFetcher> fetchers = new Dictionary<PropertyInfo, IRerverseEntityFetcher>();
         private List<Tuple<PropertyInfo, PropertyInfo>> navigationProperties = new List<Tuple<PropertyInfo, PropertyInfo>>();
         private PropertyInfo[] primaryKeyProperties;
@@ -275,16 +278,17 @@ namespace Enmap
                     var destinationType = item.DestinationType.GetGenericArgument(typeof(IEnumerable<>), 0);
                     var itemMapper = Get(sourceType, destinationType);
 
-                    if (itemMapper != null)
+                    if (itemMapper != null || Registry.GlobalCache.IsCacheable(item.SourceType, item.DestinationType))
+//                    if (itemMapper != null)
                     {
-                        if (item.From.IsProperty() && item.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
-                        {
-                            applicators.Add(new FetchSequenceItemApplicator(item, typeof(TContext), itemMapper));
-                        }
-                        else
-                        {
-                            applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
-                        }
+//                        if (item.From.IsProperty() && item.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
+//                        {
+                            applicators.Add(new FetchSequenceItemApplicator(Registry, item, typeof(TContext), sourceType, destinationType));
+//                        }
+//                        else
+//                        {
+//                            applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
+//                        }
                     }
                     else
                     {
@@ -294,10 +298,11 @@ namespace Enmap
                 else
                 {
                     var itemMapper = Get(item.SourceType, item.DestinationType);
-                    if (itemMapper != null)
+                    if (itemMapper != null || Registry.GlobalCache.IsCacheable(item.SourceType, item.DestinationType))
+//                    if (itemMapper != null)
                     {
-                        if (item.RelationshipMappingStyle == RelationshipMappingStyle.Fetch)
-                        {
+//                        if (item.RelationshipMappingStyle == RelationshipMappingStyle.Fetch)
+//                        {
                             var relationship = item.From.GetPropertyInfo();
                             var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
                             var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == relationship.Name);
@@ -305,17 +310,17 @@ namespace Enmap
 
                             if (association.Constraint.FromProperties[0].DeclaringType.FullName == relationship.DeclaringType.FullName)
                             {
-                                applicators.Add(new ReverseFetchEntityItemApplicator(this, item, typeof(TContext), itemMapper));
+                                applicators.Add(new ReverseFetchEntityItemApplicator(this, item, typeof(TContext), item.SourceType, item.DestinationType));
                             }
                             else
                             {
-                                applicators.Add(new FetchEntityItemApplicator(this, item, typeof(TContext), itemMapper));
+                                applicators.Add(new FetchEntityItemApplicator(Registry, item, typeof(TContext), item.SourceType, item.DestinationType));
                             }
-                        }
-                        else
-                        {
-                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));                            
-                        }
+//                        }
+//                        else
+//                        {
+//                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));                            
+//                        }
                     }
                     else
                     {
@@ -417,35 +422,6 @@ namespace Enmap
         public override async Task<object> ObjectMapTransientTo(object transient, object context)
         {
             return await MapTransientTo(transient, (TContext)context);
-        }
-
-        public override void DemandFetcher(PropertyInfo entityRelationship)
-        {
-            if (!fetchers.ContainsKey(entityRelationship))
-            {
-                fetchers[entityRelationship] = FetcherFactory.CreateFetcher(this, entityRelationship);
-            }
-        }
-
-        public override void DemandFetcher()
-        {
-            // Threadsafe because this method should not be invoked in a multithreaded context (happens during initialization,
-            // which must only happen once, and before any multithreaded activity begins)
-            if (primaryFetcher == null)
-                primaryFetcher = FetcherFactory.CreateFetcher(this);
-        }
-
-        public override IEntityFetcher GetFetcher()
-        {
-            return primaryFetcher;
-        }
-
-        public override IRerverseEntityFetcher GetFetcher(PropertyInfo primaryEntityRelationship)
-        {
-            IRerverseEntityFetcher result;
-            if (!fetchers.TryGetValue(primaryEntityRelationship, out result))
-                throw new Exception("No fetcher registered for: " + primaryEntityRelationship.DeclaringType.FullName + "." + primaryEntityRelationship.Name);
-            return result;
         }
 
         public override IMapperRegistry Registry

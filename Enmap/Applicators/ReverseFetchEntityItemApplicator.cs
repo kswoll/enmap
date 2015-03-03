@@ -12,24 +12,20 @@ namespace Enmap.Applicators
 {
     public class ReverseFetchEntityItemApplicator : MapperItemApplicator
     {
-        private Mapper dependentMapper;
+        private Type sourceType;
+        private Type destinationType;
         private PropertyInfo transientProperty;
         private PropertyInfo primaryIdProperty;
-        private PropertyInfo relationship;
+        private LambdaExpression relationship;
 
-        public ReverseFetchEntityItemApplicator(Mapper primaryMapper, IMapperItem item, Type contextType, Mapper dependentMapper) : base(item, contextType)
+        public ReverseFetchEntityItemApplicator(Mapper primaryMapper, IMapperItem item, Type contextType, Type sourceType, Type destinationType) : base(item, contextType)
         {
-            this.dependentMapper = dependentMapper;
+            this.sourceType = sourceType;
+            this.destinationType = destinationType;
 
             var entitySet = primaryMapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == primaryMapper.SourceType.FullName);
             primaryIdProperty = primaryMapper.SourceType.GetProperty(entitySet.ElementType.KeyProperties[0].Name);
-            relationship = item.From.GetPropertyInfo();
-        }
-
-        public override void Commit()
-        {
-            base.Commit();
-            dependentMapper.DemandFetcher(relationship);
+            relationship = item.From;
         }
 
         public override void BuildTransientType(TypeBuilder type)
@@ -53,10 +49,10 @@ namespace Enmap.Applicators
             var id = (int)transientProperty.GetValue(source, null);
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
-            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, dependentMapper, id, async x =>
+            context.AddFetcherItem(new ReverseEntityFetcherItem(primaryIdProperty.DeclaringType, relationship, sourceType, destinationType, id, async x =>
             {
                 object value = x;
-                if (!relationship.PropertyType.IsGenericEnumerable())
+                if (!relationship.Body.Type.IsGenericEnumerable())
                 {
                     if (!x.Any())
                         return;

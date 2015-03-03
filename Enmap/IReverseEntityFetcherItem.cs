@@ -7,7 +7,9 @@ namespace Enmap
 {
     public interface IReverseEntityFetcherItem : IFetcherItem
     {
-        PropertyInfo PrimaryEntityRelationship { get; }         // The entity type for which we are trying to resolve all the aggregate ids.
-        Mapper DependentEntityMapper { get; }                   // The mapper registered for the entity type that contains the primary key of the PrimaryEntityType
+        Type PrimaryEntityType { get; }
+        LambdaExpression PrimaryEntityRelationship { get; }         // The entity type for which we are trying to resolve all the aggregate ids.
+        Type SourceType { get; }
+        Type DestinationType { get; }
     }
 }

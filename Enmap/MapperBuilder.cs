@@ -184,18 +184,6 @@ namespace Enmap
                 get { return batchProcessor; }
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
-            {
-                relationshipMappingStyle = RelationshipMappingStyle.Inline;
-                return this;
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
-            {
-                relationshipMappingStyle = RelationshipMappingStyle.Fetch;
-                return this;
-            }
-
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
             {
                 if (this.transposer != null)
@@ -221,16 +209,6 @@ namespace Enmap
             public ForFromExpressionAdapter(ForFromExpression<TDestinationValue, TSourceValue> forExpression) : base(forExpression)
             {
                 this.forFromExpression = forExpression;
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
-            {
-                return forFromExpression.Fetch();
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
-            {
-                return forFromExpression.Inline();
             }
 
             public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)

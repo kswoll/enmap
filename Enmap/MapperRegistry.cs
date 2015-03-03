@@ -11,9 +11,11 @@ namespace Enmap
         EntityContainer Metadata { get; }
         Type DbContextType { get; }
         Mapper Get<TSource, TDestination>();
+        Type[] GetSourceTypes(Type destinationType);
+        IGlobalCache GlobalCache { get; }
     }
 
-    public class MapperRegistry 
+    public abstract class MapperRegistry 
     {
         private static Dictionary<Type, IMapperRegistry> registries = new Dictionary<Type, IMapperRegistry>();
 
@@ -26,12 +28,17 @@ namespace Enmap
         {
             return registries[dbContextType];
         }
+
+        public abstract Type[] GetSourceTypes(Type destinationType);
     }
 
     public class MapperRegistry<TContext> : MapperRegistry, IMapperRegistry where TContext : MapperContext
     {
+        public IGlobalCache GlobalCache { get; set; }
+
         private List<IMapperBuilder> mapperBuilders = new List<IMapperBuilder>();
         private List<Mapper> mappers = new List<Mapper>();
+        private Dictionary<Type, List<Type>> sourceTypesByDestinationType = new Dictionary<Type, List<Type>>();
         private MapperGenerator<TContext> builder;
         private Type dbContextType;
         private EntityContainer metadata;
@@ -75,6 +82,11 @@ namespace Enmap
             get { return dbContextType; }
         }
 
+        public override Type[] GetSourceTypes(Type destinationType)
+        {
+            return sourceTypesByDestinationType[destinationType].ToArray();
+        }
+
         internal void CallRegister(MapperGenerator<TContext> builder)
         {
             this.builder = builder;
@@ -83,6 +95,14 @@ namespace Enmap
             {
                 var mapper = current.Finish();
                 mappers.Add(mapper);
+
+                List<Type> sourceTypeList;
+                if (!sourceTypesByDestinationType.TryGetValue(mapper.DestinationType, out sourceTypeList))
+                {
+                    sourceTypeList = new List<Type>();
+                    sourceTypesByDestinationType[mapper.DestinationType] = sourceTypeList;
+                }
+                sourceTypeList.Add(mapper.SourceType);
             }
         }
 
@@ -101,6 +121,16 @@ namespace Enmap
         Mapper IMapperRegistry.Get<TSource, TDestination>()
         {
             return Get<TSource, TDestination>();
+        }
+
+        public Mapper[] GetForSourceType(Type sourceType)
+        {
+            return Mapper.GetMappersForSourceType(sourceType);
+        }
+
+        public new Mapper Get(Type sourceType, Type destinationType)
+        {
+            return Mapper.Get(sourceType, destinationType);
         }
 
         public Mapper<TSource, TDestination, TContext> Get<TSource, TDestination>()

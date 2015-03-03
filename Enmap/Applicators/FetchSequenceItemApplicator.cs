@@ -13,30 +13,27 @@ namespace Enmap.Applicators
 {
     public class FetchSequenceItemApplicator : MapperItemApplicator
     {
-        private Mapper mapper;
+        private Type primaryEntityType;
+        private Type sourceType;
+        private Type destinationType;
         private PropertyInfo transientProperty;
         private LambdaExpression primaryKey;
-        private PropertyInfo relationship;
+        private LambdaExpression relationship;
         private Type propertyType;
 
-        public FetchSequenceItemApplicator(IMapperItem item, Type contextType, Mapper mapper) : base(item, contextType)
+        public FetchSequenceItemApplicator(IMapperRegistry registry, IMapperItem item, Type contextType, Type sourceType, Type destinationType) : base(item, contextType)
         {
-            this.mapper = mapper;
+            this.sourceType = sourceType;
+            this.destinationType = destinationType;
 
             var entity = item.From.Parameters.First();
-            var entityType = entity.Type;
-            var entitySet = mapper.Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == entityType.FullName);
-            var idProperty = entityType.GetProperty(entitySet.ElementType.KeyProperties[0].Name);
+            primaryEntityType = entity.Type;
+            var entitySet = registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == primaryEntityType.FullName);
+            var idProperty = primaryEntityType.GetProperty(entitySet.ElementType.KeyProperties[0].Name);
             primaryKey = Expression.Lambda(Expression.MakeMemberAccess(entity, idProperty), entity, item.From.Parameters[1]);
             propertyType = idProperty.PropertyType;
 
-            relationship = item.From.GetPropertyInfo();
-        }
-
-        public override void Commit()
-        {
-            base.Commit();
-            mapper.DemandFetcher(relationship);       // Demand that a fetcher be available for mapping based on the enclosing entity type
+            relationship = item.From;
         }
 
         public override void BuildTransientType(TypeBuilder type)
@@ -70,9 +67,9 @@ namespace Enmap.Applicators
 
 
             // Adds this row to be fetched later when we know all the ids that are going to need to be fetched.
-            context.AddFetcherItem(new ReverseEntityFetcherItem(relationship, mapper, id, async x =>
+            context.AddFetcherItem(new ReverseEntityFetcherItem(primaryEntityType, relationship, sourceType, destinationType, id, async x =>
             {
-                var destinationValue = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(mapper.DestinationType));
+                var destinationValue = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(destinationType));
                 foreach (var o in x)
                     destinationValue.Add(o);
                 await CopyValueToDestination(destinationValue, destination, context);
