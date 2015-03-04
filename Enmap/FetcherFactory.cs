@@ -115,6 +115,8 @@ namespace Enmap
                 
                 var destinationsByItem = new Dictionary<IFetcherItem, List<object>>();
                 var primaryKeyProperty = destinationType.GetProperty("Id");
+                if (primaryKeyProperty == null)
+                    throw new Exception("No id found on destination type: " + destinationType.FullName);
                 foreach (var result in results)
                 {
                     var id = primaryKeyProperty.GetValue(result, null);
