@@ -68,6 +68,7 @@
     <Compile Include="BatchItem.cs" />
     <Compile Include="BatchProcessor.cs" />
     <Compile Include="EntityFetcherItem.cs" />
+    <Compile Include="FetchKeyPair.cs" />
     <Compile Include="IBatchFetcherItem.cs" />
     <Compile Include="IGlobalCache.cs" />
     <Compile Include="MapperBuilder.cs" />

@@ -40,6 +40,9 @@ namespace Enmap
             private LambdaExpression primaryEntityRelationship;
             private PropertyInfo primaryEntityKeyProperty;
             private PropertyInfo dependentEntityKeyProperty;
+            private Type fetchKeyType;
+            private PropertyInfo parentIdProperty;
+            private PropertyInfo childIdProperty;
 
             public ContainerFetcher(IMapperRegistry registry, Type sourceType, Type destinationType, Type primaryEntityType, LambdaExpression primaryEntityRelationship)
             {
@@ -56,12 +59,15 @@ namespace Enmap
                 var dependentEntityKeyEfProperty = dependentEntitySet.ElementType.KeyProperties.Single();
                 dependentEntityKeyProperty = sourceType.GetProperty(dependentEntityKeyEfProperty.Name);
 
+                fetchKeyType = typeof(FetchKeyPair<,>).MakeGenericType(primaryEntityKeyProperty.PropertyType, dependentEntityKeyProperty.PropertyType);
+                parentIdProperty = fetchKeyType.GetProperty("ParentId");
+                childIdProperty = fetchKeyType.GetProperty("ChildId");
                 where = typeof(Queryable).GetMethods().Single(x => x.Name == "Where" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(primaryEntityType);
                 cast = typeof(Enumerable).GetMethods().Single(x => x.Name == "Cast").MakeGenericMethod(primaryEntityKeyProperty.PropertyType);
-                select = typeof(Queryable).GetMethods().Single(x => x.Name == "Select" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(primaryEntityType, dependentEntityKeyProperty.PropertyType);
-                selectMany = typeof(Queryable).GetMethods().Single(x => x.Name == "SelectMany" && x.GetGenericArguments().Length == 2 && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(primaryEntityType, dependentEntityKeyProperty.PropertyType);
+                select = typeof(Queryable).GetMethods().Single(x => x.Name == "Select" && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(primaryEntityType, fetchKeyType);
+                selectMany = typeof(Queryable).GetMethods().Single(x => x.Name == "SelectMany" && x.GetGenericArguments().Length == 2 && x.GetParameters()[1].ParameterType.GetGenericArguments()[0].GetGenericArguments().Length == 2).MakeGenericMethod(primaryEntityType, fetchKeyType);
                 contains = typeof(Enumerable).GetMethods().Single(x => x.Name == "Contains" && x.GetParameters().Length == 2).MakeGenericMethod(primaryEntityKeyProperty.PropertyType);
-                toArrayAsync = typeof(QueryableExtensions).GetMethods().Single(x => x.Name == "ToArrayAsync" && x.GetParameters().Length == 1).MakeGenericMethod(dependentEntityKeyProperty.PropertyType);
+                toArrayAsync = typeof(QueryableExtensions).GetMethods().Single(x => x.Name == "ToArrayAsync" && x.GetParameters().Length == 1).MakeGenericMethod(fetchKeyType);
             }
 
             public async Task Apply(IEnumerable<IReverseEntityFetcherItem> items, MapperContext context)
@@ -85,23 +91,29 @@ namespace Enmap
                 var body = mainBinder.BindBody(primaryEntityRelationship, obj, Expression.Constant(context, context.GetType()));
                 if (primaryEntityRelationship.Body.Type.IsGenericEnumerable())
                 {
-                    var selectMethod = typeof(Enumerable).GetMethods().Single(x => x.Name == "Select" && x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>)).MakeGenericMethod(sourceType, dependentEntityKeyProperty.PropertyType);
+                    var selectMethod = typeof(Enumerable).GetMethods().Single(x => x.Name == "Select" && x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>)).MakeGenericMethod(sourceType, fetchKeyType);
                     var subParameter = Expression.Parameter(sourceType);
-                    var subLambda = Expression.Lambda(typeof(Func<,>).MakeGenericType(sourceType, dependentEntityKeyProperty.PropertyType),
-                        Expression.MakeMemberAccess(subParameter, dependentEntityKeyProperty),
+                    var subLambda = Expression.Lambda(typeof(Func<,>).MakeGenericType(sourceType, fetchKeyType),
+                        Expression.MemberInit(
+                            Expression.New(fetchKeyType), 
+                            Expression.Bind(parentIdProperty, Expression.MakeMemberAccess(obj, primaryEntityKeyProperty)),
+                            Expression.Bind(childIdProperty, Expression.MakeMemberAccess(subParameter, dependentEntityKeyProperty))),
                         subParameter);
                     body = Expression.Call(selectMethod, body, subLambda);
                     var lambda = Expression.Lambda(
-                        typeof(Func<,>).MakeGenericType(primaryEntityType, typeof(IEnumerable<>).MakeGenericType(dependentEntityKeyProperty.PropertyType)),
+                        typeof(Func<,>).MakeGenericType(primaryEntityType, typeof(IEnumerable<>).MakeGenericType(fetchKeyType)),
                         body, 
                         obj);
                     queryable = (IQueryable)selectMany.Invoke(null, new object[] { queryable, lambda });                    
                 }
                 else
                 {
-                    body = Expression.MakeMemberAccess(body, dependentEntityKeyProperty);
+                    body = Expression.MemberInit(
+                        Expression.New(fetchKeyType), 
+                        Expression.Bind(parentIdProperty, Expression.MakeMemberAccess(obj, primaryEntityKeyProperty)),
+                        Expression.Bind(childIdProperty, Expression.MakeMemberAccess(body, dependentEntityKeyProperty)));
                     var lambda = Expression.Lambda(
-                        typeof(Func<,>).MakeGenericType(primaryEntityType, dependentEntityKeyProperty.PropertyType),
+                        typeof(Func<,>).MakeGenericType(primaryEntityType, fetchKeyType),
                         body, 
                         obj);
                     queryable = (IQueryable)select.Invoke(null, new object[] { queryable, lambda });
@@ -110,7 +122,9 @@ namespace Enmap
                 var task = (Task)toArrayAsync.Invoke(null, new object[] { queryable });
                 await task;
 
-                var destinationIds = (Array)task.GetType().GetProperty("Result").GetValue(task, null);
+                var destinationPairs = ((Array)task.GetType().GetProperty("Result").GetValue(task, null)).Cast<IFetchKeyPair>().ToArray();
+                var destinationIds = destinationPairs.Select(x => x.ChildId).ToArray();
+                var parentIdsByDestinationId = destinationPairs.ToLookup(x => x.ChildId, x => x.ParentId);
                 var results = await context.Registry.GlobalCache.GetByIds(sourceType, destinationType, destinationIds, context);
                 
                 var destinationsByItem = new Dictionary<IFetcherItem, List<object>>();
@@ -119,17 +133,21 @@ namespace Enmap
                     throw new Exception("No id found on destination type: " + destinationType.FullName);
                 foreach (var result in results)
                 {
-                    var id = primaryKeyProperty.GetValue(result, null);
-                    var itemSet = itemsById[id];
-                    foreach (var item in itemSet)
+                    var destinationId = primaryKeyProperty.GetValue(result, null);
+                    var parentIds = parentIdsByDestinationId[destinationId];
+                    foreach (var parentId in parentIds)
                     {
-                        List<object> destinations;
-                        if (!destinationsByItem.TryGetValue(item, out destinations))
+                        var itemSet = itemsById[parentId];
+                        foreach (var item in itemSet)
                         {
-                            destinations = new List<object>();
-                            destinationsByItem[item] = destinations;
-                        }
-                        destinations.Add(result);                        
+                            List<object> destinations;
+                            if (!destinationsByItem.TryGetValue(item, out destinations))
+                            {
+                                destinations = new List<object>();
+                                destinationsByItem[item] = destinations;
+                            }
+                            destinations.Add(result);                        
+                        }                        
                     }
                 }
 
