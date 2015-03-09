@@ -278,7 +278,7 @@ namespace Enmap
                     var destinationType = item.DestinationType.GetGenericArgument(typeof(IEnumerable<>), 0);
                     var itemMapper = Get(sourceType, destinationType);
 
-                    if (itemMapper != null || Registry.GlobalCache.IsCacheable(item.SourceType, item.DestinationType))
+                    if (itemMapper != null || Registry.GlobalCache.IsCacheable(sourceType, destinationType))
 //                    if (itemMapper != null)
                     {
 //                        if (item.From.IsProperty() && item.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
