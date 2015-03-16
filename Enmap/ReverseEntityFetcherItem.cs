@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Enmap
 {
-    public class ReverseEntityFetcherItem : IReverseEntityFetcherItem
+    public class ReverseEntityFetcherItem : IFetcherItem
     {
         public Type PrimaryEntityType { get; set; }
         public LambdaExpression PrimaryEntityRelationship { get; set; }

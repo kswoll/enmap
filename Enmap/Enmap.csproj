@@ -67,6 +67,8 @@
     <Compile Include="Applicators\ReverseFetchEntityItemApplicator.cs" />
     <Compile Include="BatchItem.cs" />
     <Compile Include="BatchProcessor.cs" />
+    <Compile Include="ContainerFetcher.cs" />
+    <Compile Include="EntityFetcher.cs" />
     <Compile Include="EntityFetcherItem.cs" />
     <Compile Include="FetchKeyPair.cs" />
     <Compile Include="IBatchFetcherItem.cs" />
@@ -81,11 +83,7 @@
     <Compile Include="RelationshipMappingStyle.cs" />
     <Compile Include="ReverseEntityFetcherItem.cs" />
     <Compile Include="FetcherFactory.cs" />
-    <Compile Include="IEntityFetcher.cs" />
-    <Compile Include="IEntityFetcherItem.cs" />
     <Compile Include="IFetcherItem.cs" />
-    <Compile Include="IRerverseEntityFetcher.cs" />
-    <Compile Include="IReverseEntityFetcherItem.cs" />
     <Compile Include="IMapperItem.cs" />
     <Compile Include="MapperContext.cs" />
     <Compile Include="Interfaces.cs" />

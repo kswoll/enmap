@@ -104,7 +104,6 @@ namespace Enmap
         private ProjectionBuilder projection;
         private List<IMapperItemApplicator> applicators = new List<IMapperItemApplicator>();
         private List<Func<object, object, Task>> afterTasks = new List<Func<object, object, Task>>();
-        private Dictionary<PropertyInfo, IRerverseEntityFetcher> fetchers = new Dictionary<PropertyInfo, IRerverseEntityFetcher>();
         private List<Tuple<PropertyInfo, PropertyInfo>> navigationProperties = new List<Tuple<PropertyInfo, PropertyInfo>>();
         private PropertyInfo[] primaryKeyProperties;
 
@@ -243,7 +242,6 @@ namespace Enmap
             {
                 items.Add((obj, context) =>
                 {
-//                    throw new Exception(obj + " " + item.Item1 + " " + item.Item2);
                     return new[] { Expression.Bind(item.Item2, Expression.MakeMemberAccess(obj, item.Item1)) };
                 });
             }
@@ -279,16 +277,8 @@ namespace Enmap
                     var itemMapper = Get(sourceType, destinationType);
 
                     if (itemMapper != null || Registry.GlobalCache.IsCacheable(sourceType, destinationType))
-//                    if (itemMapper != null)
                     {
-//                        if (item.From.IsProperty() && item.RelationshipMappingStyle != RelationshipMappingStyle.Inline)
-//                        {
-                            applicators.Add(new FetchSequenceItemApplicator(Registry, item, typeof(TContext), sourceType, destinationType));
-//                        }
-//                        else
-//                        {
-//                            applicators.Add(new SequenceItemApplicator(item, typeof(TContext), itemMapper));
-//                        }
+                        applicators.Add(new FetchSequenceItemApplicator(Registry, item, typeof(TContext), sourceType, destinationType));
                     }
                     else
                     {
@@ -299,41 +289,26 @@ namespace Enmap
                 {
                     var itemMapper = Get(item.SourceType, item.DestinationType);
                     if (itemMapper != null || Registry.GlobalCache.IsCacheable(item.SourceType, item.DestinationType))
-//                    if (itemMapper != null)
                     {
-//                        if (item.RelationshipMappingStyle == RelationshipMappingStyle.Fetch)
-//                        {
-                            var relationship = item.From.GetPropertyInfo();
-                            var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
-                            var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == relationship.Name);
-                            var association = navigationProperty.RelationshipType as AssociationType;
+                        var relationship = item.From.GetPropertyInfo();
+                        var entitySet = Registry.Metadata.EntitySets.Single(x => x.ElementType.FullName == relationship.DeclaringType.FullName);
+                        var navigationProperty = entitySet.ElementType.NavigationProperties.Single(x => x.Name == relationship.Name);
+                        var association = navigationProperty.RelationshipType as AssociationType;
 
-                            if (association.Constraint.FromProperties[0].DeclaringType.FullName == relationship.DeclaringType.FullName)
-                            {
-                                applicators.Add(new ReverseFetchEntityItemApplicator(this, item, typeof(TContext), item.SourceType, item.DestinationType));
-                            }
-                            else
-                            {
-                                applicators.Add(new FetchEntityItemApplicator(Registry, item, typeof(TContext), item.SourceType, item.DestinationType));
-                            }
-//                        }
-//                        else
-//                        {
-//                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));                            
-//                        }
+                        if (association.Constraint.FromProperties[0].DeclaringType.FullName == relationship.DeclaringType.FullName)
+                        {
+                            applicators.Add(new ReverseFetchEntityItemApplicator(this, item, typeof(TContext), item.SourceType, item.DestinationType));
+                        }
+                        else
+                        {
+                            applicators.Add(new FetchEntityItemApplicator(Registry, item, typeof(TContext), item.SourceType, item.DestinationType));
+                        }
                     }
                     else
                     {
                         applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
                     }
                 }
-/*
-                else if (item is IWithMapperItem)
-                {
-                    var withItem = (IWithMapperItem)item;
-                    applicators.Add(new WithItemApplicator(withItem, typeof(TContext)));
-                }
-*/
             }
         }
 

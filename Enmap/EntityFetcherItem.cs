@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Enmap
 {
-    public class EntityFetcherItem : IEntityFetcherItem
+    public class EntityFetcherItem : IFetcherItem
     {
         public Type SourceType { get; set; }
         public Type DestinationType { get; set; }
