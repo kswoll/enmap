@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
+using Enmap.Utils;
 
 namespace Enmap
 {
@@ -12,6 +13,7 @@ namespace Enmap
         Type DbContextType { get; }
         Mapper Get<TSource, TDestination>();
         Type[] GetSourceTypes(Type destinationType);
+        Type[] GetDestinationTypes(Type sourceType);
         IGlobalCache GlobalCache { get; }
     }
 
@@ -30,6 +32,7 @@ namespace Enmap
         }
 
         public abstract Type[] GetSourceTypes(Type destinationType);
+        public abstract Type[] GetDestinationTypes(Type sourceType);
     }
 
     public class MapperRegistry<TContext> : MapperRegistry, IMapperRegistry where TContext : MapperContext
@@ -39,6 +42,7 @@ namespace Enmap
         private List<IMapperBuilder> mapperBuilders = new List<IMapperBuilder>();
         private List<Mapper> mappers = new List<Mapper>();
         private Dictionary<Type, List<Type>> sourceTypesByDestinationType = new Dictionary<Type, List<Type>>();
+        private Dictionary<Type, List<Type>> destinationTypesBySourceType = new Dictionary<Type, List<Type>>();
         private MapperGenerator<TContext> builder;
         private Type dbContextType;
         private EntityContainer metadata;
@@ -87,6 +91,12 @@ namespace Enmap
             return sourceTypesByDestinationType[destinationType].ToArray();
         }
 
+        public override Type[] GetDestinationTypes(Type sourceType)
+        {
+            var result = destinationTypesBySourceType.Get(sourceType);
+            return result == null ? null : result.ToArray();
+        }
+
         internal void CallRegister(MapperGenerator<TContext> builder)
         {
             this.builder = builder;
@@ -103,6 +113,14 @@ namespace Enmap
                     sourceTypesByDestinationType[mapper.DestinationType] = sourceTypeList;
                 }
                 sourceTypeList.Add(mapper.SourceType);
+
+                List<Type> destinationTypeList;
+                if (!destinationTypesBySourceType.TryGetValue(mapper.SourceType, out destinationTypeList))
+                {
+                    destinationTypeList = new List<Type>();
+                    destinationTypesBySourceType[mapper.SourceType] = destinationTypeList;
+                }
+                destinationTypeList.Add(mapper.DestinationType);
             }
         }
 
