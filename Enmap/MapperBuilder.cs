@@ -33,9 +33,11 @@ namespace Enmap
             get { return registry; }
         }
 
-        public IForExpression<TSource, TDestination, TContext, TValue> For<TValue>(Expression<Func<TDestination, TValue>> property)
+        public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Map<TDestinationValue, TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> sourceProperty, Expression<Func<TDestination, TDestinationValue>> destinationProperty)
         {
-            return new ForExpression<TValue>(this, property);
+            var result = new MapExpression<TSourceValue, TDestinationValue>(sourceProperty, destinationProperty);
+            items.Add(result);
+            return result;
         }
 
         public IEnumerable<IMapperItem> Items
@@ -48,104 +50,42 @@ namespace Enmap
             get { return afterActions; }
         }
 
-        public IMapperBuilder<TSource, TDestination, TContext> After(Func<TDestination, TContext, Task> action)
+        public void After(Func<TDestination, TContext, Task> action)
         {
             afterActions.Add((x, context) => action((TDestination)x, (TContext)context));
-            return this;
-        }
-/*
-
-        public IWithExpression<TSource, TTransient, TDestination, TContext> With<TTransient>(Expression<Func<TSource, TTransient>> transient)
-        {
-            return new WithExpression<TTransient>(this, transient);
         }
 
-        public class WithExpression<TTransient> : MapperBuilderAdapter<TSource, TDestination, TContext>, IWithExpression<TSource, TTransient, TDestination, TContext>, IWithMapperItem
+        public class MapExpression<TSourceValue, TDestinationValue> : IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue>, IMapperItem
         {
-            private static int withNameCounter = 1;
-
-            private Expression<Func<TSource, TTransient>> transientExpression;
-            private string name;
-
-            public WithExpression(IMapperBuilder<TSource, TDestination, TContext> mapper, Expression<Func<TSource, TTransient>> transientExpression) : base(mapper)
-            {
-                this.transientExpression = transientExpression;
-                this.name = "__With" + withNameCounter;
-            }
-
-            public IMapperBuilder<TSource, TDestination, TContext> ApplyAsync(Func<TTransient, TDestination, TContext, Task> applier)
-            {
-                Source.withAppliers.Add(new Tuple<LambdaExpression, Func<object, object, object, Task>>(transientExpression, (transient, destination, context) => applier((TTransient)transient, (TDestination)destination, (TContext)context)));
-                return this;
-            }
-
-            public string Name
-            {
-                get { return name; }
-            }
-        }
-*/
-
-        public class ForExpression<TValue> : MapperBuilderAdapter<TSource, TDestination, TContext>, IForExpression<TSource, TDestination, TContext, TValue>
-        {
-            private Expression<Func<TDestination, TValue>> property;
-
-            public ForExpression(IMapperBuilder<TSource, TDestination, TContext> mapper, Expression<Func<TDestination, TValue>> property) : base(mapper)
-            {
-                this.property = property;
-            }
-
-            public Expression<Func<TDestination, TValue>> Property
-            {
-                get { return property; }
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property)
-            {
-                return new ForFromExpression<TValue, TSourceValue>(this, property);
-            }
-        }
-
-        public class ForExpressionAdapter<TValue> : MapperBuilderAdapter<TSource, TDestination, TContext>, IForExpression<TSource, TDestination, TContext, TValue>
-        {
-            private IForExpression<TSource, TDestination, TContext, TValue> forExpression;
-
-            public ForExpressionAdapter(IForExpression<TSource, TDestination, TContext, TValue> forExpression) : base(forExpression)
-            {
-                this.forExpression = forExpression;
-            }
-
-            public Expression<Func<TDestination, TValue>> Property
-            {
-                get { return forExpression.Property; }
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TValue, TSourceValue> From<TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> property)
-            {
-                return forExpression.From(property);
-            }
-        }
-
-        public class ForFromExpression<TDestinationValue, TSourceValue> : ForExpressionAdapter<TDestinationValue>, IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>, IMapperItem
-        {
-            private ForExpression<TDestinationValue> forExpression;
+            private Expression<Func<TSource, TContext, TSourceValue>> sourceProperty;
+            private Expression<Func<TDestination, TDestinationValue>> destinationProperty;
             private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;
-            private Expression<Func<TSource, TContext, TSourceValue>> fromProperty;
             private RelationshipMappingStyle relationshipMappingStyle = RelationshipMappingStyle.Default;
             private IBatchProcessor<TDestinationValue> batchProcessor; 
 
-            public ForFromExpression(ForExpression<TDestinationValue> forExpression, Expression<Func<TSource, TContext, TSourceValue>> fromProperty) : base(forExpression)
+            public MapExpression(
+                Expression<Func<TSource, TContext, TSourceValue>> sourceProperty,
+                Expression<Func<TDestination, TDestinationValue>> destinationProperty) 
             {
-                this.forExpression = forExpression;
-                this.fromProperty = fromProperty;
-                AddItem(this);
+                this.sourceProperty = sourceProperty;
+                this.destinationProperty = destinationProperty;
+            }
+
+            public Expression<Func<TSource, TContext, TSourceValue>> SourceProperty
+            {
+                get { return sourceProperty; }
+            }
+
+            public Expression<Func<TDestination, TDestinationValue>> DestinationProperty
+            {
+                get { return destinationProperty; }
             }
 
             public string Name
             {
                 get
                 {
-                    return forExpression.Property.GetPropertyName();
+                    return DestinationProperty.GetPropertyName();
                 }
             }
 
@@ -161,12 +101,12 @@ namespace Enmap
 
             public LambdaExpression For
             {
-                get {  return forExpression.Property; }
+                get {  return DestinationProperty; }
             }
 
             public LambdaExpression From
             {
-                get { return fromProperty; }
+                get { return sourceProperty; }
             }
 
             public RelationshipMappingStyle RelationshipMappingStyle
@@ -184,19 +124,19 @@ namespace Enmap
                 get { return batchProcessor; }
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
+            public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Inline()
             {
                 relationshipMappingStyle = RelationshipMappingStyle.Inline;
                 return this;
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
+            public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Fetch()
             {
                 relationshipMappingStyle = RelationshipMappingStyle.Fetch;
                 return this;
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
+            public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
             {
                 if (this.transposer != null)
                     throw new Exception("To has already been called for this From expression.");
@@ -204,43 +144,13 @@ namespace Enmap
                 return this;
             }
 
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor)
+            public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor)
             {
                 if (this.batchProcessor != null)
                     throw new Exception("Only one batch processor may be defined for a given From expression");
                 relationshipMappingStyle = RelationshipMappingStyle.Batch;
                 this.batchProcessor = batchProcessor;
                 return this;
-            }
-        }
-
-        public class ForFromExpressionAdapter<TDestinationValue, TSourceValue> : ForExpressionAdapter<TDestinationValue>, IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue>
-        {
-            private ForFromExpression<TDestinationValue, TSourceValue> forFromExpression;
-
-            public ForFromExpressionAdapter(ForFromExpression<TDestinationValue, TSourceValue> forExpression) : base(forExpression)
-            {
-                this.forFromExpression = forExpression;
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Fetch()
-            {
-                return forFromExpression.Fetch();
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Inline()
-            {
-                return forFromExpression.Inline();
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer)
-            {
-                return forFromExpression.To(transposer);
-            }
-
-            public IForFromExpression<TSource, TDestination, TContext, TDestinationValue, TSourceValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor)
-            {
-                return forFromExpression.Batch(batchProcessor);
             }
         }
     }

@@ -72,7 +72,6 @@
     <Compile Include="EntityFetcherItem.cs" />
     <Compile Include="IBatchFetcherItem.cs" />
     <Compile Include="MapperBuilder.cs" />
-    <Compile Include="MapperBuilderAdapter.cs" />
     <Compile Include="MapperExtensions.cs" />
     <Compile Include="Utils\AnonymousTypeCloner.cs" />
     <Compile Include="Utils\MetadataExtensions.cs" />

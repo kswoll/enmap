@@ -91,11 +91,11 @@ namespace Enmap
             get { return builder; }
         }
 
-        public IMapperBuilder<TSource, TDestination, TContext> Map<TSource, TDestination>()
+        public void Create<TSource, TDestination>(Action<IMapperBuilder<TSource, TDestination, TContext>> builder)
         {
-            var expression = new MapperGenerator<TContext>().Map<TSource, TDestination>(this);
+            var expression = new MapperGenerator<TContext>().Create<TSource, TDestination>(this);
             mapperBuilders.Add(expression);
-            return expression;
+            builder(expression);
         }
 
         Mapper IMapperRegistry.Get<TSource, TDestination>()
