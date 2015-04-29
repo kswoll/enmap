@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Enmap.Utils;
@@ -35,6 +36,9 @@ namespace Enmap
 
         public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Map<TDestinationValue, TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> sourceProperty, Expression<Func<TDestination, TDestinationValue>> destinationProperty)
         {
+            if (items.Any(x => Equals(x.For.GetPropertyInfo(), destinationProperty.GetPropertyInfo())))
+                throw new Exception("Duplicate mapping for " + destinationProperty.GetPropertyInfo().DeclaringType.FullName + "." + destinationProperty.GetPropertyInfo().Name);
+
             var result = new MapExpression<TSourceValue, TDestinationValue>(sourceProperty, destinationProperty);
             items.Add(result);
             return result;

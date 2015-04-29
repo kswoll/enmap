@@ -69,6 +69,7 @@
     <Compile Include="Applicators\SequenceItemApplicator.cs" />
     <Compile Include="BatchItem.cs" />
     <Compile Include="BatchProcessor.cs" />
+    <Compile Include="EnmapLogger.cs" />
     <Compile Include="EntityFetcherItem.cs" />
     <Compile Include="IBatchFetcherItem.cs" />
     <Compile Include="MapperBuilder.cs" />

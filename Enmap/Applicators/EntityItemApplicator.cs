@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -20,12 +22,21 @@ namespace Enmap.Applicators
 
         public override void BuildTransientType(TypeBuilder type)
         {
+            EnmapLogger.Log(Item.Name);
             type.DefineProperty(Item.Name, mapper.TransientType);
         }
 
         public override IEnumerable<Projections.ProjectionBuilderItem> BuildProjection(Type transientType)
         {
-            transientProperty = transientType.GetProperty(Item.Name);
+            EnmapLogger.Log(string.Join(", ", transientType.GetProperties().Select(x => x.Name)));
+            try
+            {
+                transientProperty = transientType.GetProperty(Item.Name);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Error building projection for " + transientType.FullName + "." + Item.Name, e);
+            }
             yield return BuildMemberBindings;
         }
 
