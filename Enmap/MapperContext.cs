@@ -107,7 +107,7 @@ namespace Enmap
                     }
                     foreach (var task in tasks)
                     {
-                        task.Item1(task.Item2, task.Item3);
+                        await task.Item1(task.Item2, task.Item3);
                     }
                     var itemsSet = new HashSet<IFetcherItem>(items);
                     lock (lockObject)
