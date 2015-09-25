@@ -44,8 +44,7 @@ namespace Enmap.Applicators
                 }
                 catch (Exception e)
                 {
-                    throw new Exception(string.Format("Error assigning '{0}' of type {1} to destination '{2}' of type {3}",
-                        Item.Name, transientValue == null ? "null" : transientValue.GetType().FullName, Item.For.GetPropertyName(), Item.For.GetPropertyInfo().PropertyType.FullName), e);
+                    throw new Exception($"Error assigning '{Item.Name}' of type {(transientValue == null ? "null" : transientValue.GetType().FullName)} to destination '{Item.For.GetPropertyName()}' of type {Item.For.GetPropertyInfo().PropertyType.FullName}", e);
                 }
             }
             try
