@@ -347,12 +347,20 @@ namespace Enmap
 
         public async Task MapTo(IQueryable<TSource> query, Func<object, TDestination, Task> translator, TContext context)
         {
-            var queryableResult = queryableSelectMethod.Invoke(null, new object[] { query, projection.BuildProjection(context) });
+            var projected = projection.BuildProjection(context);
+            var queryableResult = queryableSelectMethod.Invoke(null, new object[] { query, projected });
             Array arrayResult;
             if (queryableResult is IDbAsyncEnumerable)
             {
                 var task = (Task)toArrayAsyncMethod.Invoke(null, new[] { queryableResult });
-                await task;                
+                try
+                {
+                    await task;
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Error executing query: " + projected, e);
+                }
                 arrayResult = (Array)taskResult.GetValue(task, null);
             }
             else

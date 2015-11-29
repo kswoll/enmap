@@ -72,6 +72,11 @@ namespace Enmap.Utils
             }
         }
 
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            return Substitute(node) ?? base.VisitParameter(node);
+        }
+
         public override Expression Visit(Expression node)
         {
             return Substitute(node) ?? base.Visit(node);

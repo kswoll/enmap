@@ -51,9 +51,16 @@ namespace Enmap.Applicators
             var lambda = mapper.Projection.BuildProjection(context);
             var result = subBinder.BindBody(lambda, originalProjection);
 
-            var conditional = Expression.Condition(Expression.NotEqual(originalProjection, Expression.Constant(null)), result, Expression.Constant(null, result.Type), result.Type);
+            if (!(Item.From.Body is ParameterExpression))
+            {
+                result = Expression.Condition(Expression.NotEqual(originalProjection, Expression.Constant(null)), result, Expression.Constant(null, result.Type), result.Type);
+            }
+            else
+            {
+                
+            }
                         
-            yield return Expression.Bind(transientProperty, conditional);
+            yield return Expression.Bind(transientProperty, result);
         }
 
         public override async Task CopyToDestination(object source, object destination, MapperContext context)
