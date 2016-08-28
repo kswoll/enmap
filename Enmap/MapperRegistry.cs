@@ -13,7 +13,7 @@ namespace Enmap
         Mapper Get<TSource, TDestination>();
     }
 
-    public class MapperRegistry 
+    public class MapperRegistry
     {
         private static Dictionary<Type, IMapperRegistry> registries = new Dictionary<Type, IMapperRegistry>();
 
@@ -24,7 +24,10 @@ namespace Enmap
 
         public static IMapperRegistry Get(Type dbContextType)
         {
-            return registries[dbContextType];
+            IMapperRegistry registry;
+            if (!registries.TryGetValue(dbContextType, out registry))
+                throw new Exception($"No mapper registry found for data context type {dbContextType.FullName}. Ensure `Mapper.Initialize(YourMapperRegistry.Instance)` has been called.");
+            return registry;
         }
     }
 
