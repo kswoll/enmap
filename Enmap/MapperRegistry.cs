@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Enmap
 {
-    public class MapperRegistry
+    public abstract class MapperRegistry
     {
         private static readonly Dictionary<Type, IMapperRegistry> registries = new Dictionary<Type, IMapperRegistry>();
 
@@ -25,7 +26,11 @@ namespace Enmap
         }
     }
 
-    public class MapperRegistry<TContext> : MapperRegistry, IMapperRegistry where TContext : MapperContext
+    /// <summary>
+    /// The top-level type that stores the mapping between db and model types
+    /// </summary>
+    /// <typeparam name="TContext"></typeparam>
+    public abstract class MapperRegistry<TContext> : MapperRegistry, IMapperRegistry where TContext : MapperContext
     {
         public EntityContainer Metadata { get; }
         public Type DbContextType { get; }
@@ -36,7 +41,7 @@ namespace Enmap
         private readonly List<Mapper> mappers = new List<Mapper>();
         private readonly Action<MapperRegistry<TContext>> register;
 
-        public MapperRegistry(DbContext dbContext, Action<MapperRegistry<TContext>> register = null) : this(dbContext.GetType(), GetEntityContainer(dbContext), register)
+        protected MapperRegistry(DbContext dbContext, Action<MapperRegistry<TContext>> register = null) : this(dbContext.GetType(), GetEntityContainer(dbContext), register)
         {
             // If a register method is passed in, then this is an adhoc registry and so we can call initialize immediately
             if (register != null)
@@ -51,7 +56,7 @@ namespace Enmap
             return objectContext.MetadataWorkspace.GetEntityContainer(objectContext.DefaultContainerName, DataSpace.CSpace);
         }
 
-        public MapperRegistry(Type dbContextType, EntityContainer metadata, Action<MapperRegistry<TContext>> register = null) : base(dbContextType)
+        protected MapperRegistry(Type dbContextType, EntityContainer metadata, Action<MapperRegistry<TContext>> register = null) : base(dbContextType)
         {
             DbContextType = dbContextType;
             Metadata = metadata;
@@ -116,5 +121,16 @@ namespace Enmap
                 throw new Exception("No mapper found from " + typeof(TSource).FullName + " to " + typeof(TDestination).FullName);
             return result;
         }
+    }
+
+    public class MapperRegistry<TContext, TDbContext> : MapperRegistry<TContext>
+        where TContext : MapperContext
+        where TDbContext : DbContext, new()
+    {
+        public MapperRegistry(Action<MapperRegistry<TContext>> register = null) : base(new TDbContext(), register)
+        {
+        }
+
+        public static MapHelper<TSource> From<TSource>(TDbContext db, IQueryable<TSource> query) => new MapHelper<TSource>(query, (MapperContext)Activator.CreateInstance(typeof(TContext), db));
     }
 }

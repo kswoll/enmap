@@ -161,7 +161,7 @@ namespace Enmap
 
         /// <summary>
         /// Initializes this mapper.  This method is called *after* the list of mappers has been sorted
-        /// according to dependencies, thus any target mappers will already be realized since they will 
+        /// according to dependencies, thus any target mappers will already be realized since they will
         /// have been committed before this call.
         /// </summary>
         protected override void Commit()
@@ -238,11 +238,7 @@ namespace Enmap
 
             foreach (var item in navigationProperties)
             {
-                items.Add((obj, context) =>
-                {
-//                    throw new Exception(obj + " " + item.Item1 + " " + item.Item2);
-                    return new[] { Expression.Bind(item.Item2, Expression.MakeMemberAccess(obj, item.Item1)) };
-                });
+                items.Add((obj, context) => new[] { Expression.Bind(item.Item2, Expression.MakeMemberAccess(obj, item.Item1)) });
             }
 
             foreach (var applicator in applicators)
@@ -256,7 +252,7 @@ namespace Enmap
         /// <summary>
         /// Initializes the applicators list.  This list is what drives the mapping since it handles the various
         /// kinds of relationships that may occur:
-        /// 
+        ///
         /// a) Normal primitive mappings
         /// b) Entity mappings
         /// c) Entity sequence mappings
@@ -314,7 +310,7 @@ namespace Enmap
                         }
                         else
                         {
-                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));                            
+                            applicators.Add(new EntityItemApplicator(item, typeof(TContext), itemMapper));
                         }
                     }
                     else
@@ -322,13 +318,6 @@ namespace Enmap
                         applicators.Add(new DefaultItemApplicator(item, typeof(TContext)));
                     }
                 }
-/*
-                else if (item is IWithMapperItem)
-                {
-                    var withItem = (IWithMapperItem)item;
-                    applicators.Add(new WithItemApplicator(withItem, typeof(TContext)));
-                }
-*/
             }
         }
 
@@ -388,7 +377,7 @@ namespace Enmap
         }
 
         /// <summary>
-        /// This should generally only be called internally (or by extensions) to map a transient type to the 
+        /// This should generally only be called internally (or by extensions) to map a transient type to the
         /// destination type.
         /// </summary>
         /// <param name="transient">An instance of the transient type produced by this mapper.</param>

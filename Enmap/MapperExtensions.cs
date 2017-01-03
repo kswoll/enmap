@@ -16,8 +16,8 @@ namespace Enmap
 
         public class MapHelper<TSource>
         {
-            private IQueryable<TSource> query;
-            private MapperContext context;
+            private readonly IQueryable<TSource> query;
+            private readonly MapperContext context;
 
             public MapHelper(IQueryable<TSource> query, MapperContext context)
             {
