@@ -57,9 +57,9 @@ namespace Enmap.Applicators
             }
             else
             {
-                
+
             }
-                        
+
             yield return Expression.Bind(transientProperty, result);
         }
 

@@ -127,10 +127,10 @@ namespace Enmap
         where TContext : MapperContext
         where TDbContext : DbContext, new()
     {
+        public static MapHelper<TSource> From<TSource>(TContext context, IQueryable<TSource> query) => new MapHelper<TSource>(query, context);
+
         public MapperRegistry(Action<MapperRegistry<TContext>> register = null) : base(new TDbContext(), register)
         {
         }
-
-        public static MapHelper<TSource> From<TSource>(TDbContext db, IQueryable<TSource> query) => new MapHelper<TSource>(query, (MapperContext)Activator.CreateInstance(typeof(TContext), db));
     }
 }

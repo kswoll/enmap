@@ -11,23 +11,23 @@ namespace Enmap
         private List<Func<Task>> fixupTasks = new List<Func<Task>>();
         private List<IFetcherItem> fetcherItems = new List<IFetcherItem>();
         private object lockObject = new object();
-        private DbContext dbContext;
+        private DbContext db;
         private Dictionary<Tuple<Type, object>, object> cache = new Dictionary<Tuple<Type, object>, object>();
         private List<Tuple<Func<object, object, Task>, object, MapperContext>> afterTasks = new List<Tuple<Func<object, object, Task>, object, MapperContext>>();
 
-        public MapperContext(DbContext dbContext)
+        public MapperContext(DbContext db)
         {
-            this.dbContext = dbContext;
+            this.db = db;
         }
 
         public IMapperRegistry Registry
         {
-            get { return MapperRegistry.Get(dbContext.GetType()); }
+            get { return MapperRegistry.Get(db.GetType()); }
         }
 
-        public DbContext DbContext
+        public DbContext Db
         {
-            get { return dbContext; }
+            get { return db; }
         }
 
         internal void Cache(Type type, object key, object value)

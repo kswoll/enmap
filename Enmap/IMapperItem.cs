@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
@@ -13,7 +12,8 @@ namespace Enmap
         LambdaExpression For { get; }
         LambdaExpression From { get; }
         Func<object, object, Task<object>> Transposer { get; }
-        RelationshipMappingStyle RelationshipMappingStyle { get; }         
+        Func<object, object, Task<object>> PostTransposer { get; }
+        RelationshipMappingStyle RelationshipMappingStyle { get; }
         IBatchProcessor BatchProcessor { get; }
     }
 }

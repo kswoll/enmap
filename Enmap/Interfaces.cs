@@ -48,6 +48,7 @@ namespace Enmap
         IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Fetch();
         IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Inline();
         IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> To(Func<TSourceValue, TContext, Task<TDestinationValue>> transposer);
+        IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After(Func<TDestinationValue, TContext, Task<TDestinationValue>> transposer);
         IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor);
     }
 }

@@ -47,6 +47,18 @@ namespace Enmap.Applicators
                     throw new Exception($"Error assigning '{Item.Name}' of type {(transientValue == null ? "null" : transientValue.GetType().FullName)} to destination '{Item.For.GetPropertyName()}' of type {Item.For.GetPropertyInfo().PropertyType.FullName}", e);
                 }
             }
+            var postTransformer = Item.PostTransposer;
+            if (postTransformer != null)
+            {
+                try
+                {
+                    transientValue = await postTransformer(transientValue, context);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"Error assigning '{Item.Name}' of type {(transientValue == null ? "null" : transientValue.GetType().FullName)} to destination '{Item.For.GetPropertyName()}' of type {Item.For.GetPropertyInfo().PropertyType.FullName}", e);
+                }
+            }
             try
             {
                 Item.For.GetPropertyInfo().SetValue(destination, transientValue);

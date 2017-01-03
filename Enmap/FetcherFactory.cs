@@ -52,7 +52,7 @@ namespace Enmap
                 var itemsById = items.ToLookup(x => x.EntityId);
 
                 // Our queryable object from which we can grab the dependent items
-                var dbSet = context.DbContext.Set(dependentMapper.SourceType);
+                var dbSet = context.Db.Set(dependentMapper.SourceType);
 
                 // Build where predicate
                 var entityParameter = Expression.Parameter(dependentMapper.SourceType);
@@ -130,7 +130,7 @@ namespace Enmap
                 var itemsById = items.ToLookup(x => x.EntityId);
 
                 // Our queryable object from which we can grab the dependent items
-                var dbSet = context.DbContext.Set(mapper.SourceType);
+                var dbSet = context.Db.Set(mapper.SourceType);
 
                 // Build where predicate
                 var entityParameter = Expression.Parameter(mapper.SourceType);

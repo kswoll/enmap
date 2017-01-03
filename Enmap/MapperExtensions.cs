@@ -47,6 +47,21 @@ namespace Enmap
             return expression.To((x, context) => Task.FromResult(transposer(x, context)));
         }
 
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression, Func<TDestinationValue, Task<TDestinationValue>> transposer) where TContext : MapperContext
+        {
+            return expression.After((x, context) => transposer(x));
+        }
+
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression, Func<TDestinationValue, TDestinationValue> transposer) where TContext : MapperContext
+        {
+            return expression.After(x => Task.FromResult(transposer(x)));
+        }
+
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression, Func<TDestinationValue, TContext, TDestinationValue> transposer) where TContext : MapperContext
+        {
+            return expression.After((x, context) => Task.FromResult(transposer(x, context)));
+        }
+
         public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Map<TSource, TDestination, TContext, TSourceValue, TDestinationValue>(this IMapperBuilder<TSource, TDestination, TContext> builder, Expression<Func<TSource, TSourceValue>> sourceProperty, Expression<Func<TDestination, TDestinationValue>> destinationProperty) where TContext : MapperContext
         {
             return builder.Map(

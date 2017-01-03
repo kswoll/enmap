@@ -64,6 +64,7 @@ namespace Enmap
             private Expression<Func<TSource, TContext, TSourceValue>> sourceProperty;
             private Expression<Func<TDestination, TDestinationValue>> destinationProperty;
             private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;
+            private Func<TDestinationValue, TContext, Task<TDestinationValue>> after;
             private RelationshipMappingStyle relationshipMappingStyle = RelationshipMappingStyle.Default;
             private IBatchProcessor<TDestinationValue> batchProcessor;
 
@@ -123,6 +124,11 @@ namespace Enmap
                 get { return async (x, context) => transposer == null ? x : await transposer((TSourceValue)x, (TContext)context); }
             }
 
+            public Func<object, object, Task<object>> PostTransposer
+            {
+                get { return async (x, context) => after == null ? x : await after((TDestinationValue)x, (TContext)context); }
+            }
+
             public IBatchProcessor BatchProcessor
             {
                 get { return batchProcessor; }
@@ -145,6 +151,14 @@ namespace Enmap
                 if (this.transposer != null)
                     throw new Exception("To has already been called for this From expression.");
                 this.transposer = transposer;
+                return this;
+            }
+
+            public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After(Func<TDestinationValue, TContext, Task<TDestinationValue>> after)
+            {
+                if (this.after != null)
+                    throw new Exception("After has already been called for this From expression.");
+                this.after = after;
                 return this;
             }
 
