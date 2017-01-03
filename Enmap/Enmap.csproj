@@ -73,7 +73,9 @@
     <Compile Include="BatchProcessor.cs" />
     <Compile Include="EnmapLogger.cs" />
     <Compile Include="EntityFetcherItem.cs" />
+    <Compile Include="EntityAndListBatchProcessor.cs" />
     <Compile Include="IBatchFetcherItem.cs" />
+    <Compile Include="IMapperRegistry.cs" />
     <Compile Include="MapperBuilder.cs" />
     <Compile Include="MapperExtensions.cs" />
     <Compile Include="Utils\AnonymousTypeCloner.cs" />

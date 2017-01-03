@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -8,7 +9,7 @@ namespace Enmap
 
     public class BatchProcessor<TSource, TDestination, TContext> : IBatchProcessor<TDestination> where TContext : MapperContext
     {
-        private BatchApplier<TSource, TContext> applier;
+        private readonly BatchApplier<TSource, TContext> applier;
 
         protected BatchProcessor()
         {

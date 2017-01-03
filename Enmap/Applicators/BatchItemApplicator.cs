@@ -27,7 +27,7 @@ namespace Enmap.Applicators
 
         public void BuildTransientType(TypeBuilder type)
         {
-            type.DefineProperty(item.Name, item.SourceType);            
+            type.DefineProperty(item.Name, item.SourceType);
         }
 
         public IEnumerable<ProjectionBuilderItem> BuildProjection(Type transientType)
@@ -59,11 +59,11 @@ namespace Enmap.Applicators
 
         class BatchFetcherItem : IBatchFetcherItem
         {
-            public object EntityId { get; private set; }
-            public IBatchProcessor BatchProcessor { get; private set; }
+            public object EntityId { get; }
+            public IBatchProcessor BatchProcessor { get; }
 
-            private object destination;
-            private PropertyInfo destinationProperty;
+            private readonly object destination;
+            private readonly PropertyInfo destinationProperty;
 
             public BatchFetcherItem(object destination, PropertyInfo destinationProperty, object entityId, IBatchProcessor batchProcessor)
             {

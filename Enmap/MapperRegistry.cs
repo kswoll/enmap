@@ -3,19 +3,13 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
+using System.Threading.Tasks;
 
 namespace Enmap
 {
-    public interface IMapperRegistry
-    {
-        EntityContainer Metadata { get; }
-        Type DbContextType { get; }
-        Mapper Get<TSource, TDestination>();
-    }
-
     public class MapperRegistry
     {
-        private static Dictionary<Type, IMapperRegistry> registries = new Dictionary<Type, IMapperRegistry>();
+        private static readonly Dictionary<Type, IMapperRegistry> registries = new Dictionary<Type, IMapperRegistry>();
 
         internal MapperRegistry(Type dbContextType)
         {
@@ -33,12 +27,14 @@ namespace Enmap
 
     public class MapperRegistry<TContext> : MapperRegistry, IMapperRegistry where TContext : MapperContext
     {
-        private List<IMapperBuilder> mapperBuilders = new List<IMapperBuilder>();
-        private List<Mapper> mappers = new List<Mapper>();
-        private MapperGenerator<TContext> builder;
-        private Type dbContextType;
-        private EntityContainer metadata;
-        private Action<MapperRegistry<TContext>> register;
+        public EntityContainer Metadata { get; }
+        public Type DbContextType { get; }
+        public MapperGenerator<TContext> Builder { get; private set; }
+        public IEnumerable<Mapper> Mappers => mappers;
+
+        private readonly List<IMapperBuilder> mapperBuilders = new List<IMapperBuilder>();
+        private readonly List<Mapper> mappers = new List<Mapper>();
+        private readonly Action<MapperRegistry<TContext>> register;
 
         public MapperRegistry(DbContext dbContext, Action<MapperRegistry<TContext>> register = null) : this(dbContext.GetType(), GetEntityContainer(dbContext), register)
         {
@@ -57,30 +53,19 @@ namespace Enmap
 
         public MapperRegistry(Type dbContextType, EntityContainer metadata, Action<MapperRegistry<TContext>> register = null) : base(dbContextType)
         {
-            this.dbContextType = dbContextType;
-            this.metadata = metadata;
+            DbContextType = dbContextType;
+            Metadata = metadata;
             this.register = register;
         }
 
         protected virtual void Register()
         {
-            if (register != null)
-                register(this);
-        }
-
-        public EntityContainer Metadata
-        {
-            get { return metadata; }
-        }
-
-        public Type DbContextType
-        {
-            get { return dbContextType; }
+            register?.Invoke(this);
         }
 
         internal void CallRegister(MapperGenerator<TContext> builder)
         {
-            this.builder = builder;
+            Builder = builder;
             Register();
             foreach (var current in mapperBuilders)
             {
@@ -89,16 +74,34 @@ namespace Enmap
             }
         }
 
-        public MapperGenerator<TContext> Builder
-        {
-            get { return builder; }
-        }
-
+        /// <summary>
+        ///  Create a mapping between the source (db type) to the destination (model) type.
+        /// </summary>
+        /// <typeparam name="TSource">The db type from which to pull values from the db</typeparam>
+        /// <typeparam name="TDestination">The model type to which db values will be copied</typeparam>
+        /// <param name="builder"></param>
         public void Create<TSource, TDestination>(Action<IMapperBuilder<TSource, TDestination, TContext>> builder)
         {
             var expression = new MapperGenerator<TContext>().Create<TSource, TDestination>(this);
             mapperBuilders.Add(expression);
             builder(expression);
+        }
+
+        /// <summary>
+        /// Create a batch processor to handle grouping up a buch of ids, making some external call to resolve those ids, and then
+        /// populating the model types -- whether a direct reference or a list of some model type -- based on the ids returned from
+        /// the db.  For direct references, the source property should be an id.  For lists, the source property should be an
+        /// IEnumerable of ids.  To consume this batch processor, pass the return value of this method to the `.Batch` method
+        /// of one of your property mappings.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the id property on your types.</typeparam>
+        /// <typeparam name="TDestination">The base type of the entity type being resolved.</typeparam>
+        /// <param name="applier">A function which takes in a sequence of ids, and returns a dictionary mapping those ids to
+        /// resolved instances of the entity.</param>
+        /// <returns>A batch processor that can be consumed by the `.Batch` operator.</returns>
+        protected EntityAndListBatchProcessor<TKey, TDestination, TContext> CreateEntityAndListBatchProcessor<TKey, TDestination>(Func<IEnumerable<TKey>, TContext, Task<IDictionary<TKey, TDestination>>> applier)
+        {
+            return new EntityAndListBatchProcessor<TKey, TDestination, TContext>(applier);
         }
 
         Mapper IMapperRegistry.Get<TSource, TDestination>()
@@ -112,11 +115,6 @@ namespace Enmap
             if (result == null)
                 throw new Exception("No mapper found from " + typeof(TSource).FullName + " to " + typeof(TDestination).FullName);
             return result;
-        }
-
-        public IEnumerable<Mapper> Mappers
-        {
-            get { return mappers; }
         }
     }
 }

@@ -26,6 +26,6 @@ namespace Enmap
             get { return source.EntityId; }
         }
 
-        public IBatchProcessor BatchProcessor { get; private set; }
+        public IBatchProcessor BatchProcessor => source.BatchProcessor;
     }
 }

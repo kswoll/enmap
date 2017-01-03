@@ -9,10 +9,10 @@ namespace Enmap
 {
     public static class MapperExtensions
     {
-        public static MapHelper<TSource> Map<TSource>(this IQueryable<TSource> query, MapperContext context) 
+        public static MapHelper<TSource> Map<TSource>(this IQueryable<TSource> query, MapperContext context)
         {
             return new MapHelper<TSource>(query, context);
-        }        
+        }
 
         public class MapHelper<TSource>
         {
@@ -29,7 +29,7 @@ namespace Enmap
             {
                 var result = await context.Registry.Get<TSource, TDestination>().ObjectMapTo(query, context);
                 return result.Cast<TDestination>();
-            }                    
+            }
         }
 
         public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> To<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression, Func<TSourceValue, Task<TDestinationValue>> transposer) where TContext : MapperContext
@@ -50,7 +50,7 @@ namespace Enmap
         public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Map<TSource, TDestination, TContext, TSourceValue, TDestinationValue>(this IMapperBuilder<TSource, TDestination, TContext> builder, Expression<Func<TSource, TSourceValue>> sourceProperty, Expression<Func<TDestination, TDestinationValue>> destinationProperty) where TContext : MapperContext
         {
             return builder.Map(
-                (Expression<Func<TSource, TContext, TSourceValue>>)sourceProperty.AppendParameters(typeof(TContext)), 
+                (Expression<Func<TSource, TContext, TSourceValue>>)sourceProperty.AppendParameters(typeof(TContext)),
                 destinationProperty
             );
         }
@@ -70,7 +70,7 @@ namespace Enmap
             expression.After(async x => action(x));
         }
 
-        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Batch<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression, 
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Batch<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression,
             BatchApplier<TSourceValue, TContext> applier) where TContext : MapperContext
         {
             return expression.Batch(new BatchProcessor<TSourceValue, TDestinationValue, TContext>(applier));

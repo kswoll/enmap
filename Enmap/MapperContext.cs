@@ -70,7 +70,7 @@ namespace Enmap
 
         /// <summary>
         /// Applies all the fetchers at once.  If any new fetchers are added in the interim, those are
-        /// then applied as well.  This process is applied indefinitely until there are no more fetchers 
+        /// then applied as well.  This process is applied indefinitely until there are no more fetchers
         /// to fetch.
         /// </summary>
         public async Task Finish()
@@ -100,10 +100,10 @@ namespace Enmap
                         var fetcher = fetcherGroup.Key.GetFetcher();
                         await fetcher.Apply(fetcherGroup, this);
                     }
-                    foreach (var fetcherGroup in items.OfType<IBatchFetcherItem>().GroupBy(x => x.BatchProcessor))
+                    foreach (var batchGroup in items.OfType<IBatchFetcherItem>().GroupBy(x => x.BatchProcessor))
                     {
-                        var fetcher = fetcherGroup.Key;
-                        await fetcher.Apply(fetcherGroup, this);
+                        var batchProcessor = batchGroup.Key;
+                        await batchProcessor.Apply(batchGroup, this);
                     }
                     foreach (var task in tasks)
                     {
@@ -115,7 +115,7 @@ namespace Enmap
                         fetcherItems.RemoveAll(x => itemsSet.Contains(x));
                         items = fetcherItems.ToArray();
                         tasks = afterTasks.ToArray();
-                    }                    
+                    }
                 }
             }
         }

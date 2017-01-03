@@ -63,7 +63,7 @@ namespace Enmap
                 var queryable = (IQueryable)where.Invoke(null, new object[] { dbSet, wherePredicate });
                 var destinationsByItem = new Dictionary<IFetcherItem, List<object>>();
                 var task = dependentMapper.ObjectMapTo(
-                    queryable, 
+                    queryable,
                     async (transient, destination) =>
                     {
                         var primaryEntityKey = primaryEntityPropertyTransient.GetValue(transient, null);
@@ -78,7 +78,7 @@ namespace Enmap
                             }
                             destinations.Add(destination);
                         }
-                    }, 
+                    },
                     context);
 
                 foreach (var item in items)
@@ -88,7 +88,7 @@ namespace Enmap
                         destinationsByItem[item] = new List<object>();
                     }
                 }
-                    
+
                 await task;
                 foreach (var current in destinationsByItem)
                 {
@@ -140,7 +140,7 @@ namespace Enmap
 
                 var queryable = (IQueryable)where.Invoke(null, new object[] { dbSet, wherePredicate });
                 var task = mapper.ObjectMapTo(
-                    queryable, 
+                    queryable,
                     async (transient, destination) =>
                     {
                         var primaryEntityKey = primaryEntityTransientProperty.GetValue(transient, null);
@@ -149,9 +149,9 @@ namespace Enmap
                         {
                             await item.ApplyFetchedValue(destination);
                         }
-                    }, 
+                    },
                     context);
-                    
+
                 await task;
             }
         }

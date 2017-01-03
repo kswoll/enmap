@@ -13,14 +13,14 @@ namespace Enmap
 
         public IMapperBuilder<TSource, TDestination, TContext> Create<TSource, TDestination>(MapperRegistry<TContext> registry)
         {
-            return new MapperBuilder<TSource, TDestination, TContext>(registry);            
+            return new MapperBuilder<TSource, TDestination, TContext>(registry);
         }
     }
 
     public interface IMapperBuilder
     {
         IEnumerable<Func<object, object, Task>> AfterTasks { get; }
-        Mapper Finish();        
+        Mapper Finish();
     }
 
     public interface IMapperBuilder<TSource, TDestination, TContext> : IMapperBuilder where TContext : MapperContext
@@ -32,9 +32,9 @@ namespace Enmap
         void After(Func<TDestination, TContext, Task> action);
     }
 
-    public interface IBatchProcessor 
+    public interface IBatchProcessor
     {
-        Task Apply(IEnumerable<IBatchFetcherItem> items, MapperContext context);         
+        Task Apply(IEnumerable<IBatchFetcherItem> items, MapperContext context);
     }
 
     public interface IBatchProcessor<TDestination> : IBatchProcessor

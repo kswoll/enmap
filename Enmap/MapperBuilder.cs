@@ -65,11 +65,11 @@ namespace Enmap
             private Expression<Func<TDestination, TDestinationValue>> destinationProperty;
             private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;
             private RelationshipMappingStyle relationshipMappingStyle = RelationshipMappingStyle.Default;
-            private IBatchProcessor<TDestinationValue> batchProcessor; 
+            private IBatchProcessor<TDestinationValue> batchProcessor;
 
             public MapExpression(
                 Expression<Func<TSource, TContext, TSourceValue>> sourceProperty,
-                Expression<Func<TDestination, TDestinationValue>> destinationProperty) 
+                Expression<Func<TDestination, TDestinationValue>> destinationProperty)
             {
                 this.sourceProperty = sourceProperty;
                 this.destinationProperty = destinationProperty;
@@ -148,6 +148,17 @@ namespace Enmap
                 return this;
             }
 
+            /// <summary>
+            /// For resolving references that are external to the database.  For example, you may have some data coming from a separate service
+            /// such as a REST API. In such a scenario, when performing the map of potentially numerous entities, a naive implementation where
+            /// each reference independently calls the API, perhaps hundreds of times, would be terribly inefficient.  Instead, you want to
+            /// figure out all such references for a given type, group all those ids up, and then perform one call to that API, passing in the
+            /// list of ids.
+            /// </summary>
+            /// <param name="batchProcessor">The processor that will drive the logic and coordination of relating the ids to the target type,
+            /// and applying those values to <see cref="DestinationProperty"></see></param>
+            /// <seealso cref="MapperExtensions.Batch{TSource,TDestination,TContext,TDestinationValue,TSourceValue}" />
+            /// <seealso cref="MapperRegistry{TContext}.CreateEntityAndListBatchProcessor{TKey,TDestination}" />
             public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Batch(IBatchProcessor<TDestinationValue> batchProcessor)
             {
                 if (this.batchProcessor != null)
