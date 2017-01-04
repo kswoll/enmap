@@ -9,6 +9,11 @@ namespace Enmap
 {
     public class MapperBuilder<TSource, TDestination, TContext> : IMapperBuilder<TSource, TDestination, TContext> where TContext : MapperContext
     {
+        public MapperRegistry<TContext> Registry => registry;
+        public IEnumerable<IMapperItem> Items => items;
+        public IEnumerable<Func<object, object, Task>> AfterTasks => afterActions;
+        public Mapper<TSource, TDestination, TContext> Finish() => new Mapper<TSource, TDestination, TContext>(this);
+
         internal MapperRegistry<TContext> registry;
         internal List<IMapperItem> items = new List<IMapperItem>();
         internal List<Func<object, object, Task>> afterActions = new List<Func<object, object, Task>>();
@@ -19,20 +24,7 @@ namespace Enmap
             this.registry = registry;
         }
 
-        Mapper IMapperBuilder.Finish()
-        {
-            return Finish();
-        }
-
-        public Mapper<TSource, TDestination, TContext> Finish()
-        {
-            return new Mapper<TSource, TDestination, TContext>(this);
-        }
-
-        public MapperRegistry<TContext> Registry
-        {
-            get { return registry; }
-        }
+        Mapper IMapperBuilder.Finish() => Finish();
 
         public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Map<TDestinationValue, TSourceValue>(Expression<Func<TSource, TContext, TSourceValue>> sourceProperty, Expression<Func<TDestination, TDestinationValue>> destinationProperty)
         {
@@ -44,16 +36,6 @@ namespace Enmap
             return result;
         }
 
-        public IEnumerable<IMapperItem> Items
-        {
-            get { return items; }
-        }
-
-        public IEnumerable<Func<object, object, Task>> AfterTasks
-        {
-            get { return afterActions; }
-        }
-
         public void After(Func<TDestination, TContext, Task> action)
         {
             afterActions.Add((x, context) => action((TDestination)x, (TContext)context));
@@ -61,8 +43,18 @@ namespace Enmap
 
         public class MapExpression<TSourceValue, TDestinationValue> : IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue>, IMapperItem
         {
-            private Expression<Func<TSource, TContext, TSourceValue>> sourceProperty;
-            private Expression<Func<TDestination, TDestinationValue>> destinationProperty;
+            public Expression<Func<TSource, TContext, TSourceValue>> SourceProperty => sourceProperty;
+            public Expression<Func<TDestination, TDestinationValue>> DestinationProperty { get; }
+            public string Name => DestinationProperty.GetPropertyName();
+            public Type SourceType => typeof(TSourceValue);
+            public Type DestinationType => typeof(TDestinationValue);
+            public LambdaExpression For => DestinationProperty;
+            public LambdaExpression From => sourceProperty;
+            public RelationshipMappingStyle RelationshipMappingStyle => relationshipMappingStyle;
+            public IBatchProcessor BatchProcessor => batchProcessor;
+
+            private readonly Expression<Func<TSource, TContext, TSourceValue>> sourceProperty;
+
             private Func<TSourceValue, TContext, Task<TDestinationValue>> transposer;
             private Func<TDestinationValue, TContext, Task<TDestinationValue>> after;
             private RelationshipMappingStyle relationshipMappingStyle = RelationshipMappingStyle.Default;
@@ -73,50 +65,7 @@ namespace Enmap
                 Expression<Func<TDestination, TDestinationValue>> destinationProperty)
             {
                 this.sourceProperty = sourceProperty;
-                this.destinationProperty = destinationProperty;
-            }
-
-            public Expression<Func<TSource, TContext, TSourceValue>> SourceProperty
-            {
-                get { return sourceProperty; }
-            }
-
-            public Expression<Func<TDestination, TDestinationValue>> DestinationProperty
-            {
-                get { return destinationProperty; }
-            }
-
-            public string Name
-            {
-                get
-                {
-                    return DestinationProperty.GetPropertyName();
-                }
-            }
-
-            public Type SourceType
-            {
-                get { return typeof(TSourceValue); }
-            }
-
-            public Type DestinationType
-            {
-                get { return typeof(TDestinationValue); }
-            }
-
-            public LambdaExpression For
-            {
-                get {  return DestinationProperty; }
-            }
-
-            public LambdaExpression From
-            {
-                get { return sourceProperty; }
-            }
-
-            public RelationshipMappingStyle RelationshipMappingStyle
-            {
-                get {  return relationshipMappingStyle; }
+                DestinationProperty = destinationProperty;
             }
 
             public Func<object, object, Task<object>> Transposer
@@ -127,11 +76,6 @@ namespace Enmap
             public Func<object, object, Task<object>> PostTransposer
             {
                 get { return async (x, context) => after == null ? x : await after((TDestinationValue)x, (TContext)context); }
-            }
-
-            public IBatchProcessor BatchProcessor
-            {
-                get { return batchProcessor; }
             }
 
             public IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> Inline()

@@ -47,7 +47,47 @@ namespace Enmap
             return expression.To((x, context) => Task.FromResult(transposer(x, context)));
         }
 
-        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression, Func<TDestinationValue, Task<TDestinationValue>> transposer) where TContext : MapperContext
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> If<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(
+            this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression,
+            Func<TDestinationValue, Task<bool>> predicate
+        )
+            where TContext : MapperContext
+        {
+            return expression.If((x, context) => predicate(x));
+        }
+
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> If<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(
+            this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression,
+            Func<TDestinationValue, bool> predicate
+        )
+            where TContext : MapperContext
+        {
+            return expression.If(x => Task.FromResult(predicate(x)));
+        }
+
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> If<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(
+            this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression,
+            Func<TDestinationValue, TContext, Task<bool>> predicate
+        )
+            where TContext : MapperContext
+        {
+            return expression.After(async (x, context) => await predicate(x, context) ? x : default(TDestinationValue));
+        }
+
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> If<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(
+            this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression,
+            Func<TDestinationValue, TContext, bool> predicate
+        )
+            where TContext : MapperContext
+        {
+            return expression.If((x, context) => Task.FromResult(predicate(x, context)));
+        }
+
+        public static IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> After<TSource, TDestination, TContext, TDestinationValue, TSourceValue>(
+            this IMapExpression<TSource, TDestination, TContext, TSourceValue, TDestinationValue> expression,
+            Func<TDestinationValue, Task<TDestinationValue>> transposer
+        )
+            where TContext : MapperContext
         {
             return expression.After((x, context) => transposer(x));
         }
