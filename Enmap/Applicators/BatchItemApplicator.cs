@@ -67,8 +67,9 @@ namespace Enmap.Applicators
 
             public BatchFetcherItem(object destination, PropertyInfo destinationProperty, object entityId, IBatchProcessor batchProcessor)
             {
-                if (entityId == null)
-                    throw new Exception();
+                if (entityId == null || entityId is int id && id == 0)
+                    throw new ArgumentException($"Invalid EntityId: {entityId}", nameof(entityId));
+
                 this.destination = destination;
                 this.destinationProperty = destinationProperty;
 
@@ -79,6 +80,11 @@ namespace Enmap.Applicators
             public async Task ApplyFetchedValue(object value)
             {
                 destinationProperty.SetValue(destination, value);
+            }
+
+            public override string ToString()
+            {
+                return $"EntityId: {EntityId}, destinationProperty: {destinationProperty.DeclaringType.Name}{destinationProperty.Name}, destination: {destination}";
             }
         }
     }
