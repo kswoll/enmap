@@ -68,6 +68,11 @@ namespace Enmap
                 DestinationProperty = destinationProperty;
             }
 
+            public override string ToString()
+            {
+                return $"Source: {sourceProperty}, Destination: {DestinationProperty}";
+            }
+
             public Func<object, object, Task<object>> Transposer
             {
                 get { return async (x, context) => transposer == null ? x : await transposer((TSourceValue)x, (TContext)context); }

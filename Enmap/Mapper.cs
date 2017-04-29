@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -18,6 +19,8 @@ namespace Enmap
 {
     public abstract class Mapper
     {
+        public static Action<string> Logger { get; set; }
+
         private static ConcurrentDictionary<Tuple<Type, Type>, Mapper> mappers = new ConcurrentDictionary<Tuple<Type, Type>, Mapper>();
 
         protected Mapper(Type sourceType, Type destinationType)
@@ -336,8 +339,12 @@ namespace Enmap
 
         public async Task MapTo(IQueryable<TSource> query, Func<object, TDestination, Task> translator, TContext context)
         {
+            var stopwatch = new Stopwatch();
+
             var projected = projection.BuildProjection(context);
             var queryableResult = queryableSelectMethod.Invoke(null, new object[] { query, projected });
+
+            stopwatch.Start();
             Array arrayResult;
             if (queryableResult is IDbAsyncEnumerable)
             {
@@ -356,6 +363,9 @@ namespace Enmap
             {
                 arrayResult = (Array)toArrayMethod.Invoke(null, new[] { queryableResult });
             }
+            stopwatch.Stop();
+            Logger?.Invoke($"Query execution took {stopwatch.Elapsed}\r\n{queryableResult}");
+
             foreach (var element in arrayResult)
             {
                 var destination = await MapTransientTo(element, context);
